@@ -8,23 +8,24 @@
     /* ── Reset & base ── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg: #0a0a0a;
-      --bg2: #141414;
-      --bg3: #1e1e1e;
-      --border: #2a2a2a;
-      --pink: #e91e8c;
-      --pink-glow: rgba(233,30,140,0.18);
+      --bg: #080610;
+      --bg2: #10091a;
+      --bg3: #1a1228;
+      --border: #2d1f45;
+      --pink: #f0c800;
+      --pink-glow: rgba(240,200,0,0.13);
+      --purple: #7b3fcb;
       --green: #22c55e;
       --amber: #f59e0b;
       --red: #ef4444;
-      --text: #f0f0f0;
-      --muted: #888;
+      --text: #f2eed8;
+      --muted: #8870a8;
       --radius: 12px;
     }
     body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
 
     /* ── Layout ── */
-    header { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+    header { background: var(--bg2); border-bottom: 2px solid transparent; border-image: linear-gradient(90deg, var(--purple, #7b3fcb), var(--pink)) 1; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
     header h1 { font-size: 1.05rem; font-weight: 700; letter-spacing: -0.3px; }
     header h1 span { color: var(--pink); }
     .header-actions { display: flex; gap: .6rem; }
@@ -44,8 +45,8 @@
     .api-row { display: flex; gap: .5rem; }
     .api-row input { flex: 1; background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: .55rem .9rem; border-radius: 8px; font-size: .88rem; outline: none; }
     .api-row input:focus { border-color: var(--pink); }
-    .btn-pink { background: var(--pink); border: none; color: #fff; padding: .55rem 1.2rem; border-radius: 8px; font-size: .88rem; font-weight: 600; cursor: pointer; transition: opacity .15s; white-space: nowrap; }
-    .btn-pink:hover { opacity: .88; }
+    .btn-pink { background: var(--pink); border: none; color: #1a0d2e; padding: .55rem 1.2rem; border-radius: 8px; font-size: .88rem; font-weight: 700; cursor: pointer; transition: opacity .15s, box-shadow .15s; white-space: nowrap; }
+    .btn-pink:hover { opacity: .9; box-shadow: 0 0 18px rgba(240,200,0,.35); }
     .btn-pink:disabled { opacity: .45; cursor: default; }
     .api-status { margin-top: .55rem; font-size: .82rem; color: var(--muted); }
     .api-status .ok { color: var(--green); }
@@ -102,7 +103,8 @@
     .model-card.selected { border-color: var(--pink); background: var(--pink-glow); }
     .model-card-header { display: flex; align-items: center; gap: .5rem; margin-bottom: .25rem; }
     .model-card-header strong { font-size: .9rem; }
-    .badge { font-size: .6rem; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; background: var(--pink); color: #fff; padding: .15rem .45rem; border-radius: 4px; }
+    .badge { font-size: .6rem; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; background: var(--pink); color: #1a0d2e; padding: .15rem .45rem; border-radius: 4px; }
+    .badge.purple { background: var(--purple, #7b3fcb); color: #fff; }
     .badge.new { background: var(--pink); }
     .max-dur { font-size: .7rem; color: var(--muted); margin-left: auto; }
     .model-desc { font-size: .75rem; color: var(--muted); }
@@ -111,7 +113,7 @@
     /* ── Progress / status ── */
     #progress-section { margin-top: 1.5rem; }
     .progress-bar-wrap { height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; margin: .6rem 0; }
-    .progress-bar { height: 100%; background: var(--pink); border-radius: 3px; width: 0%; transition: width .4s; }
+    .progress-bar { height: 100%; background: linear-gradient(90deg, var(--purple, #7b3fcb), var(--pink)); border-radius: 3px; width: 0%; transition: width .4s; }
     .status-text { font-size: .82rem; color: var(--muted); }
     .status-text .pulse { color: var(--pink); animation: pulse 1.2s infinite; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
@@ -342,7 +344,7 @@ function renderModels() {
     el.innerHTML = `
       <div class="model-card-header">
         <strong>${m.name}</strong>
-        ${m.badge ? `<span class="badge new">${m.badge}</span>` : ''}
+        ${m.badge ? `<span class="badge${m.badge === 'VIDEO REF' ? ' purple' : ' new'}">${m.badge}</span>` : ''}
         <span class="max-dur">max ${m.max_duration}s</span>
       </div>
       <div class="model-desc">${m.description}</div>
