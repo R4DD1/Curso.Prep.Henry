@@ -6,6 +6,7 @@ Soporta Siray (Wan 3.0, Seedance, Kling) y escalado via fal.ai
 import asyncio
 import json
 import os
+import subprocess
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -32,7 +33,7 @@ if not HISTORY_FILE.exists():
 
 MODELS = {
     # ── Wan 3.0 ──────────────────────────────────────────────────────────────
-    "wan3-i2v": {
+    "wan3": {
         "id": "alibaba/wan-3.0-i2v",
         "name": "Wan 3.0",
         "badge": "RECOMENDADO",
@@ -42,7 +43,7 @@ MODELS = {
         "resolution": ["480p", "720p"],
         "needs_image": True,
     },
-    "wan3-i2v-spicy": {
+    "wan3-spicy": {
         "id": "alibaba/wan-3.0-i2v-spicy",
         "name": "Wan 3.0 Spicy",
         "badge": "SIN CENSURA",
@@ -52,7 +53,7 @@ MODELS = {
         "resolution": ["480p", "720p", "1080p"],
         "needs_image": True,
     },
-    "wan3-ref2v": {
+    "wan3-ref": {
         "id": "alibaba/wan-3.0-ref2v",
         "name": "Wan 3.0 Ref2V",
         "badge": "VIDEO REF",
@@ -64,40 +65,40 @@ MODELS = {
         "needs_ref_video": True,
     },
     # ── Kling ────────────────────────────────────────────────────────────────
-    "kling-i2v": {
-        "id": "kling/kling-v2-0-master-i2v",
-        "name": "Kling Motion Control",
+    "kling": {
+        "id": "kuaishou/kling-3-motion-control",
+        "name": "Kling 3 Motion Control",
         "badge": "",
         "description": "Coreografías, cámara fija, bailes limpios.",
         "max_duration": 10,
-        "price_per_sec": 0.090,
+        "price_per_sec": 0.126,
         "resolution": ["720p"],
         "needs_image": True,
     },
-    "kling-i2v-spicy": {
-        "id": "kling/kling-v2-0-master-i2v-spicy",
-        "name": "Kling Master (sin censura)",
-        "badge": "SIN CENSURA",
-        "description": "Kling v2.0 sin filtros, ideal para bailes y movimientos corporales libres.",
+    "kling-spicy": {
+        "id": "kuaishou/kling-3-motion-control",
+        "name": "Kling 3 Motion Control",
+        "badge": "",
+        "description": "Kling 3 Motion Control, bailes y movimientos corporales.",
         "max_duration": 10,
-        "price_per_sec": 0.090,
+        "price_per_sec": 0.126,
         "resolution": ["720p"],
         "needs_image": True,
     },
     # ── MiniMax ──────────────────────────────────────────────────────────────
     "minimax-v01": {
-        "id": "minimax/video-01",
-        "name": "MiniMax Video-01",
+        "id": "minimax/minimax-h3-i2v",
+        "name": "MiniMax H3",
         "badge": "",
         "description": "Alta calidad de movimiento y expresiones faciales.",
         "max_duration": 6,
-        "price_per_sec": 0.110,
-        "resolution": ["720p"],
+        "price_per_sec": 0.130,
+        "resolution": ["720p", "1080p"],
         "needs_image": True,
     },
     "minimax-live": {
-        "id": "minimax/video-01-live",
-        "name": "MiniMax Video-01 Live",
+        "id": "minimax/minimax-h3-i2v",
+        "name": "MiniMax H3",
         "badge": "POTENTE",
         "description": "Movimiento hiper-realista, ideal para avatares y UGC.",
         "max_duration": 6,
@@ -106,43 +107,43 @@ MODELS = {
         "needs_image": True,
     },
     "minimax-live-spicy": {
-        "id": "minimax/video-01-live-spicy",
-        "name": "MiniMax Live (sin censura)",
+        "id": "minimax/minimax-h3-i2v-spicy",
+        "name": "MiniMax H3 (sin censura)",
         "badge": "SIN CENSURA",
-        "description": "MiniMax Video-01 Live sin filtros de contenido.",
+        "description": "MiniMax H3 sin filtros de contenido.",
         "max_duration": 6,
         "price_per_sec": 0.130,
         "resolution": ["720p", "1080p"],
         "needs_image": True,
     },
     # ── Seedance ─────────────────────────────────────────────────────────────
-    "seedance-i2v": {
-        "id": "bytedance/seedance-1-0-lite-i2v-250528",
-        "name": "Seedance 1.0",
+    "seedance": {
+        "id": "bytedance/seedance-1.0-lite-i2v",
+        "name": "Seedance 1.0 Lite",
         "badge": "",
         "description": "Físicas complejas, movimientos rápidos, manos.",
         "max_duration": 10,
-        "price_per_sec": 0.134,
+        "price_per_sec": 0.032,
         "resolution": ["480p", "720p"],
         "needs_image": True,
     },
     "seedance-20": {
-        "id": "bytedance/seedance-2-0-i2v",
+        "id": "bytedance/seedance-2.0-i2v",
         "name": "Seedance 2.0",
         "badge": "NUEVO",
         "description": "Mayor coherencia temporal y mejor calidad de movimiento que 1.0.",
         "max_duration": 10,
-        "price_per_sec": 0.160,
+        "price_per_sec": 0.084,
         "resolution": ["480p", "720p"],
         "needs_image": True,
     },
     "seedance-25": {
-        "id": "bytedance/seedance-2-5-i2v",
+        "id": "bytedance/seedance-2.5-i2v",
         "name": "Seedance 2.5",
         "badge": "TOP",
         "description": "Última versión, físicas ultra-realistas, ideal para manos con productos.",
         "max_duration": 10,
-        "price_per_sec": 0.190,
+        "price_per_sec": 0.134,
         "resolution": ["480p", "720p", "1080p"],
         "needs_image": True,
     },
@@ -368,6 +369,64 @@ async def upload_video(file: UploadFile = File(...)):
     dest = UPLOADS_DIR / filename
     dest.write_bytes(await file.read())
     return {"path": f"/uploads/{filename}", "filename": filename}
+
+
+@app.post("/api/upload-audio")
+async def upload_audio(file: UploadFile = File(...)):
+    ext = Path(file.filename).suffix or ".mp3"
+    filename = f"{uuid.uuid4()}{ext}"
+    dest = UPLOADS_DIR / filename
+    dest.write_bytes(await file.read())
+    return {"path": f"/uploads/{filename}", "filename": filename}
+
+
+@app.post("/api/merge-audio-video")
+async def merge_audio_video(
+    video_url: str = Form(...),
+    audio_filename: str = Form(...),
+):
+    audio_path = UPLOADS_DIR / audio_filename
+    if not audio_path.exists():
+        raise HTTPException(status_code=400, detail="Audio no encontrado")
+
+    merged_filename = f"merged_{uuid.uuid4()}.mp4"
+    merged_path = OUTPUTS_DIR / merged_filename
+
+    async with httpx.AsyncClient(timeout=120) as client:
+        resp = await client.get(video_url)
+        if resp.status_code != 200:
+            raise HTTPException(status_code=502, detail="No se pudo descargar el video de Siray")
+        tmp_video_path = UPLOADS_DIR / f"tmp_{uuid.uuid4()}.mp4"
+        tmp_video_path.write_bytes(resp.content)
+
+    try:
+        result = subprocess.run(
+            [
+                "ffmpeg", "-y",
+                "-i", str(tmp_video_path),
+                "-i", str(audio_path),
+                "-c:v", "copy",
+                "-c:a", "aac",
+                "-shortest",
+                str(merged_path),
+            ],
+            capture_output=True,
+            timeout=120,
+        )
+        if result.returncode != 0:
+            raise HTTPException(status_code=500, detail="ffmpeg error: " + result.stderr.decode()[:300])
+    finally:
+        tmp_video_path.unlink(missing_ok=True)
+
+    return {"merged_url": f"/outputs/{merged_filename}", "filename": merged_filename}
+
+
+@app.get("/outputs/{filename}")
+async def serve_output(filename: str):
+    path = OUTPUTS_DIR / filename
+    if not path.exists():
+        raise HTTPException(status_code=404)
+    return FileResponse(path)
 
 
 @app.post("/api/generate")
