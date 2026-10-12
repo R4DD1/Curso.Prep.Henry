@@ -6,6 +6,7 @@ Soporta Siray (Wan 3.0, Seedance, Kling) y escalado via fal.ai
 import asyncio
 import json
 import os
+import subprocess
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -368,6 +369,64 @@ async def upload_video(file: UploadFile = File(...)):
     dest = UPLOADS_DIR / filename
     dest.write_bytes(await file.read())
     return {"path": f"/uploads/{filename}", "filename": filename}
+
+
+@app.post("/api/upload-audio")
+async def upload_audio(file: UploadFile = File(...)):
+    ext = Path(file.filename).suffix or ".mp3"
+    filename = f"{uuid.uuid4()}{ext}"
+    dest = UPLOADS_DIR / filename
+    dest.write_bytes(await file.read())
+    return {"path": f"/uploads/{filename}", "filename": filename}
+
+
+@app.post("/api/merge-audio-video")
+async def merge_audio_video(
+    video_url: str = Form(...),
+    audio_filename: str = Form(...),
+):
+    audio_path = UPLOADS_DIR / audio_filename
+    if not audio_path.exists():
+        raise HTTPException(status_code=400, detail="Audio no encontrado")
+
+    merged_filename = f"merged_{uuid.uuid4()}.mp4"
+    merged_path = OUTPUTS_DIR / merged_filename
+
+    async with httpx.AsyncClient(timeout=120) as client:
+        resp = await client.get(video_url)
+        if resp.status_code != 200:
+            raise HTTPException(status_code=502, detail="No se pudo descargar el video de Siray")
+        tmp_video_path = UPLOADS_DIR / f"tmp_{uuid.uuid4()}.mp4"
+        tmp_video_path.write_bytes(resp.content)
+
+    try:
+        result = subprocess.run(
+            [
+                "ffmpeg", "-y",
+                "-i", str(tmp_video_path),
+                "-i", str(audio_path),
+                "-c:v", "copy",
+                "-c:a", "aac",
+                "-shortest",
+                str(merged_path),
+            ],
+            capture_output=True,
+            timeout=120,
+        )
+        if result.returncode != 0:
+            raise HTTPException(status_code=500, detail="ffmpeg error: " + result.stderr.decode()[:300])
+    finally:
+        tmp_video_path.unlink(missing_ok=True)
+
+    return {"merged_url": f"/outputs/{merged_filename}", "filename": merged_filename}
+
+
+@app.get("/outputs/{filename}")
+async def serve_output(filename: str):
+    path = OUTPUTS_DIR / filename
+    if not path.exists():
+        raise HTTPException(status_code=404)
+    return FileResponse(path)
 
 
 @app.post("/api/generate")

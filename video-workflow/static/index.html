@@ -706,6 +706,15 @@ textarea.prompt:focus { border-color: var(--accent); }
         <div class="warn-banner" id="ugc-ref2v-warn" style="display:none">
           ⚠️ <strong>Ref2V billing:</strong> se cobra duración del video de entrada + salida (ej: 5s ref + 15s output = 20s facturados).
         </div>
+        <!-- Audio ElevenLabs -->
+        <label class="field-label" style="margin-top:.5rem">🎙️ Audio (ElevenLabs) <em style="color:var(--muted);font-weight:400;font-size:.8rem">— opcional</em></label>
+        <div class="drop-zone" id="ugc-audio-zone" style="min-height:80px;border-style:dashed">
+          <input type="file" accept="audio/*" id="ugc-audio-input" onchange="onUgcAudioChange(this)" />
+          <span class="dz-icon">🎵</span>
+          <span class="dz-label" style="font-size:.72rem">Subir audio<br><em style="color:var(--muted)">(MP3 · WAV · M4A)</em></span>
+          <span class="dz-sub" id="ugc-audio-name" style="color:var(--accent);display:none"></span>
+        </div>
+        <audio id="ugc-audio-preview" controls style="display:none;width:100%;margin-top:.4rem;border-radius:8px;accent-color:var(--accent)"></audio>
         <label class="field-label">Prompt del video UGC</label>
         <textarea class="prompt" placeholder="Una mujer sostiene y muestra el producto a cámara sonriendo, lo abre, reacciona emocionada, movimientos naturales, fondo minimalista blanco..."></textarea>
         <div class="row2">
@@ -1278,6 +1287,29 @@ async function mockGenerate(tab) {
     }
     if (!videoUrl) throw new Error('Tiempo de espera agotado');
 
+    // 4. Merge audio if UGC tab has audio uploaded
+    if (tab === 'ugc') {
+      const audioInput = document.getElementById('ugc-audio-input');
+      if (audioInput && audioInput.files && audioInput.files[0]) {
+        fill.style.width = '94%'; msg.textContent = 'Subiendo audio...';
+        const audioForm = new FormData();
+        audioForm.append('file', audioInput.files[0]);
+        const audioResp = await fetch('/api/upload-audio', { method:'POST', body: audioForm });
+        if (audioResp.ok) {
+          const { filename: audioFilename } = await audioResp.json();
+          fill.style.width = '97%'; msg.textContent = 'Mezclando audio y video...';
+          const mergeForm = new FormData();
+          mergeForm.append('video_url', videoUrl);
+          mergeForm.append('audio_filename', audioFilename);
+          const mergeResp = await fetch('/api/merge-audio-video', { method:'POST', body: mergeForm });
+          if (mergeResp.ok) {
+            const { merged_url } = await mergeResp.json();
+            videoUrl = merged_url;
+          }
+        }
+      }
+    }
+
     fill.style.width = '100%'; msg.textContent = '✓ Completado';
     await new Promise(r => setTimeout(r, 400));
     pg.style.display = 'none';
@@ -1422,6 +1454,21 @@ function downloadOutput(tab) {
     alert('En la app real, el video generado se descarga directamente desde Siray.');
   }
 }
+function onUgcAudioChange(input) {
+  const nameEl = document.getElementById('ugc-audio-name');
+  const preview = document.getElementById('ugc-audio-preview');
+  if (input.files && input.files[0]) {
+    nameEl.textContent = input.files[0].name;
+    nameEl.style.display = '';
+    preview.src = URL.createObjectURL(input.files[0]);
+    preview.style.display = '';
+  } else {
+    nameEl.style.display = 'none';
+    preview.style.display = 'none';
+    preview.src = '';
+  }
+}
+
 async function mockUpscale(tab) {
   const btn = document.getElementById('rh-btn-' + tab);
   const pg = document.getElementById('rh-progress-' + tab);
