@@ -1,0 +1,1715 @@
+<title>GenRocket · Generación IA</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<style>
+:root {
+  --bg: #000000;
+  --bg2: rgba(123,63,203,0.12);
+  --bg3: rgba(123,63,203,0.18);
+  --bg4: rgba(123,63,203,0.24);
+  --border: rgba(123,63,203,0.35);
+  --border2: rgba(123,63,203,0.55);
+  --accent: #f0c800;
+  --accent-glow: rgba(240,200,0,0.14);
+  --accent-soft: rgba(240,200,0,0.22);
+  --purple: #7b3fcb;
+  --purple-glow: rgba(123,63,203,0.18);
+  --purple-soft: rgba(123,63,203,0.25);
+  --green: #22c55e;
+  --amber: #f59e0b;
+  --red: #ef4444;
+  --text: #f2eed8;
+  --text2: #9880c0;
+  --muted: #5a4d70;
+  --radius: 12px;
+  color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Inter', -apple-system, sans-serif; min-height: 100vh; }
+
+/* ── Header ── */
+.header {
+  background: rgba(0,0,0,.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 1.5rem;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: env(safe-area-inset-top, 0);
+  z-index: 30;
+}
+.header::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, var(--purple), var(--accent), var(--purple));
+}
+.logo { display: flex; align-items: center; gap: .55rem; }
+.logo-mark {
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+}
+.logo-mark img { width: 36px; height: 36px; object-fit: contain; }
+.logo-text { font-size: 1rem; font-weight: 800; letter-spacing: -.3px; }
+.logo-text span { color: var(--accent); }
+.header-right { display: flex; align-items: center; gap: .5rem; }
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  padding: .3rem .75rem;
+  border-radius: 7px;
+  font-size: .78rem;
+  cursor: pointer;
+  transition: border-color .15s, color .15s;
+  font-family: inherit;
+}
+.btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+.api-badge {
+  font-size: .72rem;
+  font-weight: 600;
+  padding: .25rem .7rem;
+  border-radius: 20px;
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+}
+.api-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+
+/* ── Category tabs ── */
+.cat-nav {
+  display: flex;
+  gap: 0;
+  padding: 0 1.5rem;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.cat-nav::-webkit-scrollbar { display: none; }
+.cat-tab {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .8rem 1.1rem;
+  font-size: .82rem;
+  font-weight: 600;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color .15s, border-color .15s;
+  background: none;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  font-family: inherit;
+}
+.cat-tab:hover { color: var(--text2); }
+.cat-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.cat-tab .tab-icon { font-size: 1rem; }
+.cat-tab .tab-badge {
+  font-size: .55rem;
+  font-weight: 700;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  background: var(--purple);
+  color: #fff;
+  padding: .1rem .35rem;
+  border-radius: 3px;
+}
+
+/* ── Layout ── */
+.workspace {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 1.25rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.25rem 1.5rem;
+}
+@media (max-width: 860px) { .workspace { grid-template-columns: 1fr; } }
+
+/* ── Card ── */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.2rem;
+  margin-bottom: 1rem;
+}
+.card:last-child { margin-bottom: 0; }
+.eyebrow { font-size: .6rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent); margin-bottom: .4rem; }
+.card-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 1rem; letter-spacing: -.2px; }
+
+/* ── API Key ── */
+.api-row { display: flex; gap: .5rem; }
+.api-input {
+  flex: 1;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: .52rem .9rem;
+  border-radius: 8px;
+  font-size: .85rem;
+  outline: none;
+  font-family: inherit;
+}
+.api-input:focus { border-color: var(--accent); }
+.api-status { margin-top: .5rem; font-size: .78rem; color: var(--muted); }
+.api-status .ok { color: var(--green); }
+.api-status .bal { color: var(--accent); font-weight: 700; }
+
+/* ── Buttons ── */
+.btn-primary {
+  background: var(--accent);
+  border: none;
+  color: #1a0d2e;
+  padding: .55rem 1.2rem;
+  border-radius: 8px;
+  font-size: .85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity .15s, box-shadow .15s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.btn-primary:hover { opacity: .9; box-shadow: 0 0 20px rgba(240,200,0,.35); }
+.btn-primary:disabled { opacity: .4; cursor: default; box-shadow: none; }
+.btn-primary.full { width: 100%; padding: .8rem; font-size: .95rem; border-radius: 10px; }
+.btn-secondary {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  padding: .52rem 1rem;
+  border-radius: 8px;
+  font-size: .82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color .15s;
+  font-family: inherit;
+}
+.btn-secondary:hover { border-color: var(--accent); color: var(--text); }
+
+/* ── Upload zones ── */
+.upload-grid { display: grid; grid-template-columns: 1fr 160px; gap: .7rem; margin-bottom: .9rem; }
+.upload-grid.single { grid-template-columns: 1fr; }
+.drop-zone {
+  border: 2px dashed var(--border2);
+  border-radius: var(--radius);
+  min-height: 148px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  cursor: pointer;
+  transition: border-color .18s, background .18s;
+  position: relative;
+  overflow: hidden;
+}
+.drop-zone:hover { border-color: var(--accent); background: var(--accent-glow); }
+.drop-zone.has-file { border-color: var(--accent); border-style: solid; background: var(--accent-glow); }
+.drop-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.dz-icon { font-size: 1.8rem; }
+.dz-label { font-size: .78rem; color: var(--text2); text-align: center; line-height: 1.4; }
+.dz-sub { font-size: .68rem; color: var(--muted); }
+
+/* ── Form fields ── */
+.field-label { font-size: .76rem; color: var(--text2); display: block; margin-bottom: .3rem; }
+textarea.prompt {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: .6rem .85rem;
+  border-radius: 8px;
+  font-size: .85rem;
+  resize: vertical;
+  min-height: 70px;
+  outline: none;
+  font-family: inherit;
+  margin-bottom: .9rem;
+}
+textarea.prompt:focus { border-color: var(--accent); }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; margin-bottom: .9rem; }
+.field select, .field input[type=text] {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: .5rem .75rem;
+  border-radius: 8px;
+  font-size: .83rem;
+  outline: none;
+  font-family: inherit;
+}
+.field select:focus, .field input[type=text]:focus { border-color: var(--accent); }
+.range-row { display: flex; align-items: center; gap: .55rem; }
+.range-row input[type=range] { accent-color: var(--accent); flex: 1; cursor: pointer; }
+.range-val { font-size: .83rem; font-weight: 700; color: var(--accent); min-width: 28px; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ── Toggle (upscale) ── */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  padding: .65rem .9rem;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  cursor: pointer;
+  margin-bottom: .9rem;
+  transition: border-color .15s;
+}
+.toggle-row:hover { border-color: var(--accent); }
+.toggle-row input[type=checkbox] { accent-color: var(--accent); width: 15px; height: 15px; flex-shrink: 0; cursor: pointer; }
+.tgl-info { flex: 1; min-width: 0; }
+.tgl-info strong { font-size: .85rem; display: block; }
+.tgl-info span { font-size: .72rem; color: var(--text2); }
+.tgl-price { font-size: .76rem; color: var(--accent); font-weight: 700; flex-shrink: 0; }
+
+/* ── Cost box ── */
+.cost-box {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: .7rem .9rem;
+  margin-bottom: .9rem;
+}
+.cost-row { display: flex; justify-content: space-between; font-size: .8rem; color: var(--text2); }
+.cost-row + .cost-row { margin-top: .28rem; }
+.cost-row.total {
+  color: var(--text);
+  font-weight: 700;
+  margin-top: .5rem;
+  padding-top: .5rem;
+  border-top: 1px solid var(--border);
+  font-size: .88rem;
+}
+.cost-row.total .cv { color: var(--accent); }
+
+/* ── Progress ── */
+.progress-wrap { margin-top: 1rem; }
+.progress-track { height: 5px; background: var(--bg4); border-radius: 3px; overflow: hidden; margin: .5rem 0; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--purple), var(--accent)); border-radius: 3px; width: 0%; transition: width .5s ease; }
+.progress-label { font-size: .76rem; color: var(--text2); display: flex; align-items: center; gap: .4rem; }
+.dot-pulse { color: var(--accent); animation: pulse 1.1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* ── Output ── */
+.output-area { margin-top: 1rem; display: none; }
+.output-area video, .output-area img { width: 100%; border-radius: var(--radius); background: var(--bg3); }
+.output-actions { display: flex; gap: .5rem; margin-top: .65rem; flex-wrap: wrap; }
+
+/* ── Info banner ── */
+.info-banner {
+  background: var(--purple-glow);
+  border: 1px solid var(--purple-soft);
+  border-radius: 9px;
+  padding: .65rem .9rem;
+  font-size: .76rem;
+  color: var(--text2);
+  line-height: 1.6;
+  margin-bottom: .9rem;
+}
+.info-banner strong { color: var(--text); }
+.info-banner .hi { color: var(--accent); font-weight: 700; }
+
+/* ── Warning banner ── */
+.warn-banner {
+  background: rgba(245,158,11,.08);
+  border: 1px solid rgba(245,158,11,.25);
+  border-radius: 8px;
+  padding: .55rem .8rem;
+  font-size: .74rem;
+  color: var(--amber);
+  margin-bottom: .9rem;
+}
+
+/* ── Right panel: Model selector ── */
+.model-list { display: flex; flex-direction: column; gap: .55rem; margin-bottom: .9rem; }
+.model-card {
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: .8rem .95rem;
+  cursor: pointer;
+  transition: border-color .15s, background .15s, box-shadow .15s;
+}
+.model-card:hover { border-color: var(--border2); background: var(--bg3); }
+.model-card.sel {
+  border-color: var(--accent);
+  background: var(--accent-glow);
+  box-shadow: 0 0 0 1px var(--accent), inset 0 0 24px rgba(123,63,203,.07);
+}
+.mc-head { display: flex; align-items: center; gap: .4rem; margin-bottom: .2rem; }
+.mc-head strong { font-size: .87rem; }
+.mc-badge {
+  font-size: .56rem;
+  font-weight: 700;
+  letter-spacing: .6px;
+  text-transform: uppercase;
+  background: var(--accent);
+  color: #1a0d2e;
+  padding: .12rem .4rem;
+  border-radius: 3px;
+}
+.mc-badge.pb { background: var(--purple); color: #fff; }
+.mc-badge.gb { background: #1a7a3a; color: #a8ffca; }
+.mc-badge.red { background: rgba(180,30,30,0.85); color: #ffc0c0; border: 1px solid rgba(255,80,80,0.4); }
+.mc-dur { font-size: .67rem; color: var(--muted); margin-left: auto; font-variant-numeric: tabular-nums; }
+.mc-desc { font-size: .72rem; color: var(--text2); margin-bottom: .2rem; }
+.mc-price { font-size: .7rem; color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* ── Sidebar sections ── */
+.sidebar-section { margin-bottom: .9rem; }
+.sidebar-section:last-child { margin-bottom: 0; }
+.sidebar-divider { border: none; border-top: 1px solid var(--border); margin: .9rem 0; }
+
+/* ── Voice panel ── */
+.voice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin-bottom: .9rem; }
+.voice-chip {
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: .55rem .7rem;
+  cursor: pointer;
+  font-size: .78rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  transition: border-color .15s, background .15s;
+}
+.voice-chip:hover { border-color: var(--border2); }
+.voice-chip.sel { border-color: var(--accent); background: var(--accent-glow); color: var(--accent); }
+.voice-chip .vc-icon { font-size: 1rem; }
+.voice-chip .vc-meta { font-size: .65rem; color: var(--muted); font-weight: 400; display: block; }
+
+/* ── Image size chips ── */
+.size-chips { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: .9rem; }
+.size-chip {
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  padding: .3rem .65rem;
+  font-size: .75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.size-chip:hover { border-color: var(--border2); }
+.size-chip.sel { border-color: var(--accent); background: var(--accent-glow); color: var(--accent); }
+
+/* ── History ── */
+.history-list { display: flex; flex-direction: column; gap: .5rem; max-height: 280px; overflow-y: auto; }
+.hist-item {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  background: var(--bg3);
+  border-radius: 8px;
+  padding: .6rem .8rem;
+  font-size: .78rem;
+}
+.hist-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.hist-dot.ok { background: var(--green); }
+.hist-dot.proc { background: var(--amber); }
+.hist-dot.err { background: var(--red); }
+.hist-info { flex: 1; min-width: 0; }
+.hist-cat { font-size: .62rem; color: var(--purple); font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+.hist-prompt { color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hist-cost { color: var(--accent); font-weight: 700; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+
+/* ── Tab content visibility ── */
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+/* ── ElevenLabs key row ── */
+.el-key-row { display: flex; gap: .5rem; align-items: center; margin-bottom: .9rem; }
+.el-key-row .api-input { font-size: .8rem; }
+.el-status { font-size: .74rem; color: var(--muted); }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* ── Rocket Mascot ── */
+#rocket-mascot {
+  position: fixed;
+  bottom: 24px;
+  right: 20px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  pointer-events: none;
+}
+#rocket-mascot.visible { pointer-events: auto; }
+.rocket-bubble {
+  background: rgba(20, 8, 40, 0.96);
+  border: 1px solid var(--purple);
+  border-radius: 14px 14px 4px 14px;
+  padding: .75rem 1rem;
+  max-width: 240px;
+  font-size: .8rem;
+  line-height: 1.5;
+  color: var(--text);
+  box-shadow: 0 4px 24px rgba(123,63,203,.35), 0 0 0 1px rgba(123,63,203,.12);
+  position: relative;
+  opacity: 0;
+  transform: translateY(10px) scale(.96);
+  transition: opacity .25s ease, transform .25s ease;
+}
+.rocket-bubble.show { opacity: 1; transform: translateY(0) scale(1); }
+.rocket-bubble .rb-close {
+  position: absolute;
+  top: 5px; right: 8px;
+  font-size: .7rem;
+  color: var(--muted);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  line-height: 1;
+  font-family: inherit;
+}
+.rocket-bubble .rb-close:hover { color: var(--text2); }
+.rocket-bubble .rb-text { padding-right: 12px; }
+.rocket-bubble .rb-tip-label {
+  font-size: .62rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: .3rem;
+}
+.rocket-bubble .rb-next {
+  margin-top: .5rem;
+  font-size: .7rem;
+  color: var(--purple);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  text-decoration: underline;
+}
+.rocket-bubble .rb-next:hover { color: var(--accent); }
+.rocket-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 2px solid var(--purple);
+  background: rgba(20,8,40,.9);
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: 0 0 20px rgba(123,63,203,.4);
+  transition: transform .18s ease, box-shadow .18s ease;
+  flex-shrink: 0;
+}
+.rocket-avatar:hover { transform: scale(1.08); box-shadow: 0 0 28px rgba(240,200,0,.35); }
+.rocket-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.rocket-celebrate {
+  animation: rocketBounce .5s ease 3;
+}
+@keyframes rocketBounce {
+  0%,100% { transform: scale(1); }
+  40% { transform: scale(1.18) rotate(-6deg); }
+  70% { transform: scale(1.1) rotate(4deg); }
+}
+.celebrate-sparkles {
+  position: absolute;
+  top: -8px; left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.4rem;
+  animation: sparkleUp .8s ease forwards;
+  pointer-events: none;
+}
+@keyframes sparkleUp {
+  0% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-28px); }
+}
+</style>
+
+<!-- ── Header ── -->
+<header class="header">
+  <div class="logo">
+    <div class="logo-mark"><img src="/static/genrocket-logo.png" alt="GenRocket" /></div>
+    <div class="logo-text">Gen<span>Rocket</span></div>
+  </div>
+  <div class="header-right">
+    <div class="api-badge" id="key-badge">
+      <span class="dot" style="background:var(--muted)"></span>
+      Sin clave
+    </div>
+    <button class="btn-ghost" onclick="showApiModal()">⚙ API Keys</button>
+  </div>
+</header>
+
+<!-- ── Rocket Mascot ── -->
+<div id="rocket-mascot" class="visible">
+  <div class="rocket-bubble" id="rocket-bubble">
+    <div class="rb-tip-label" id="rb-label">💡 Tip</div>
+    <div class="rb-text" id="rb-text"></div>
+    <button class="rb-next" id="rb-next" onclick="RocketMascot.nextTip()">Otro tip →</button>
+    <button class="rb-close" id="rb-close" onclick="RocketMascot.dismiss()">✕</button>
+  </div>
+  <div class="rocket-avatar" id="rocket-avatar" onclick="RocketMascot.toggle()">
+    <img src="/static/rocket-mascot.png" alt="Rocket" />
+  </div>
+</div>
+
+<!-- ── Category nav ── -->
+<nav class="cat-nav">
+  <button class="cat-tab active" data-tab="reels" onclick="switchTab('reels',this)">
+    <span class="tab-icon">📱</span> Reels & Social
+  </button>
+  <button class="cat-tab" data-tab="ugc" onclick="switchTab('ugc',this)">
+    <span class="tab-icon">🎥</span> UGC Videos
+  </button>
+  <button class="cat-tab" data-tab="images" onclick="switchTab('images',this)">
+    <span class="tab-icon">🖼️</span> Imágenes IA
+  </button>
+  <button class="cat-tab" data-tab="voice" onclick="switchTab('voice',this)">
+    <span class="tab-icon">🎙️</span> Voz + Video
+    <span class="tab-badge">ElevenLabs</span>
+  </button>
+</nav>
+
+<!-- ── Workspace ── -->
+<div class="workspace">
+
+  <!-- ═══ LEFT COLUMN ═══ -->
+  <div>
+
+    <!-- ─ TAB: REELS ─ -->
+    <div class="tab-pane active" id="tab-reels">
+      <div class="card">
+        <div class="eyebrow">Reels & Social</div>
+        <div class="card-title">Videos verticales 9:16 para redes</div>
+        <div class="info-banner">
+          <strong>Formato:</strong> vertical 9:16 · <span class="hi">Ideal para TikTok, Instagram Reels, YouTube Shorts</span><br>
+          Wan 3.0 genera movimientos naturales de cámara, bailes y expresiones faciales.
+        </div>
+        <div class="upload-grid">
+          <div class="drop-zone">
+            <input type="file" accept="image/*" />
+            <span class="dz-icon">🖼️</span>
+            <span class="dz-label">Imagen del avatar</span>
+            <span class="dz-sub">JPG · PNG · WEBP</span>
+          </div>
+          <div class="drop-zone" id="reels-ref-img-zone" style="min-height:110px">
+            <input type="file" accept="image/*" />
+            <span class="dz-icon">🎭</span>
+            <span class="dz-label" style="font-size:.72rem">Ref. adicional<br><em style="color:var(--muted)">(opcional)</em></span>
+          </div>
+          <div class="drop-zone" id="reels-ref-video-zone" style="min-height:110px;display:none">
+            <input type="file" accept="video/*" />
+            <span class="dz-icon">🎬</span>
+            <span class="dz-label" style="font-size:.72rem">Video de<br>referencia</span>
+            <span class="dz-sub">MP4 · MOV</span>
+          </div>
+        </div>
+        <div class="warn-banner" id="reels-ref2v-warn" style="display:none">
+          ⚠️ <strong>Ref2V billing:</strong> se cobra duración del video de entrada + salida (ej: 5s ref + 15s output = 20s facturados).
+        </div>
+        <label class="field-label">Prompt del movimiento / acción</label>
+        <textarea class="prompt" placeholder="Una influencer baila una coreografía viral, sonriente, ropa urbana, fondo de ciudad de noche, movimientos fluidos y rítmicos..."></textarea>
+        <div class="row2">
+          <div class="field">
+            <label class="field-label">Duración <span id="reels-dur-disp" style="color:var(--accent);font-weight:700">10s</span></label>
+            <div class="range-row">
+              <input type="range" min="5" max="15" value="10" step="1" oninput="setDur('reels',this.value)" />
+              <span class="range-val" id="reels-dur-val">10s</span>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field-label">Resolución</label>
+            <select onchange="updateCost('reels')">
+              <option value="480p">480p (más barato)</option>
+              <option value="720p">720p</option>
+            </select>
+          </div>
+        </div>
+        <label class="toggle-row" for="reels-upscale">
+          <input type="checkbox" id="reels-upscale" onchange="updateCost('reels')" />
+          <div class="tgl-info">
+            <strong>✨ Escalar a 1080p (fal.ai ByteDance)</strong>
+            <span>+$0.0072/s · calidad final premium</span>
+          </div>
+          <span class="tgl-price" id="reels-upscale-price">+$0.072</span>
+        </label>
+        <div class="cost-box">
+          <div class="cost-row"><span>Generación (<span id="reels-model-name">Wan 3.0</span>)</span><span class="cv" id="reels-cost-gen">$0.40</span></div>
+          <div class="cost-row" id="reels-upscale-row" style="display:none"><span>Escalado 1080p</span><span class="cv" id="reels-cost-up">$0.072</span></div>
+          <div class="cost-row total"><span>Total estimado</span><span class="cv" id="reels-cost-total">$0.40</span></div>
+        </div>
+        <button class="btn-primary full" onclick="mockGenerate('reels')">▶ Crear Reel</button>
+        <div class="progress-wrap" id="reels-progress" style="display:none">
+          <div class="progress-track"><div class="progress-fill" id="reels-pfill"></div></div>
+          <div class="progress-label"><span class="dot-pulse">●</span><span id="reels-pmsg">Generando...</span></div>
+        </div>
+        <div class="output-area" id="reels-output">
+          <video id="reels-output-video" controls loop playsinline style="max-height:420px;margin:0 auto;display:block"></video>
+          <div class="output-actions">
+            <button class="btn-primary" onclick="downloadOutput('reels')">⬇ Descargar</button>
+            <button class="btn-secondary" onclick="replicateCurrent('reels')">🔁 Replicar / Editar</button>
+            <button class="btn-secondary" onclick="resetOutput('reels')">Nueva generación</button>
+            <button class="btn-rh" id="rh-btn-reels" onclick="mockUpscale('reels')" style="display:none">⬆️ Escalar con RunningHub</button>
+          </div>
+          <div id="rh-progress-reels" style="display:none;margin-top:.5rem;background:var(--bg3);border-radius:8px;padding:.6rem .8rem;font-size:.8rem;color:var(--text2)">
+            <span class="dot-pulse">●</span> <span id="rh-msg-reels">Enviando a RunningHub...</span>
+          </div>
+          <div id="rh-result-reels" style="display:none;margin-top:.5rem;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:.6rem .8rem;font-size:.8rem;color:var(--green)">
+            ✅ <strong>Video escalado a 1080p listo.</strong> <span id="rh-result-link-reels"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─ TAB: UGC ─ -->
+    <div class="tab-pane" id="tab-ugc">
+      <div class="card">
+        <div class="eyebrow">UGC Videos</div>
+        <div class="card-title">Videos de producto con avatar IA</div>
+        <div class="info-banner">
+          <strong>UGC (User Generated Content):</strong> videos de reseña, unboxing y demostración de producto con tu avatar IA.<br>
+          <span class="hi">Wan 3.0 y Seedance</span> manejan expresiones naturales, manos y objetos.
+        </div>
+        <div class="upload-grid">
+          <div class="drop-zone">
+            <input type="file" accept="image/*" />
+            <span class="dz-icon">🖼️</span>
+            <span class="dz-label">Imagen del avatar</span>
+            <span class="dz-sub">JPG · PNG · WEBP</span>
+          </div>
+          <div class="drop-zone" id="ugc-ref-video-zone" style="min-height:110px;display:none">
+            <input type="file" accept="video/*" />
+            <span class="dz-icon">🎬</span>
+            <span class="dz-label" style="font-size:.72rem">Video de<br>referencia</span>
+            <span class="dz-sub">MP4 · MOV</span>
+          </div>
+          <div class="drop-zone" id="ugc-ref-img-zone" style="min-height:110px">
+            <input type="file" accept="image/*" />
+            <span class="dz-icon">📦</span>
+            <span class="dz-label" style="font-size:.72rem">Producto<br><em style="color:var(--muted)">(opcional)</em></span>
+          </div>
+        </div>
+        <div class="warn-banner" id="ugc-ref2v-warn" style="display:none">
+          ⚠️ <strong>Ref2V billing:</strong> se cobra duración del video de entrada + salida (ej: 5s ref + 15s output = 20s facturados).
+        </div>
+        <label class="field-label">Prompt del video UGC</label>
+        <textarea class="prompt" placeholder="Una mujer sostiene y muestra el producto a cámara sonriendo, lo abre, reacciona emocionada, movimientos naturales, fondo minimalista blanco..."></textarea>
+        <div class="row2">
+          <div class="field">
+            <label class="field-label">Duración <span id="ugc-dur-disp" style="color:var(--accent);font-weight:700">10s</span></label>
+            <div class="range-row">
+              <input type="range" min="5" max="15" value="10" step="1" oninput="setDur('ugc',this.value)" />
+              <span class="range-val" id="ugc-dur-val">10s</span>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field-label">Resolución</label>
+            <select onchange="updateCost('ugc')">
+              <option value="480p">480p</option>
+              <option value="720p">720p</option>
+            </select>
+          </div>
+        </div>
+        <label class="toggle-row" for="ugc-upscale">
+          <input type="checkbox" id="ugc-upscale" onchange="updateCost('ugc')" />
+          <div class="tgl-info">
+            <strong>✨ Escalar a 1080p (fal.ai ByteDance)</strong>
+            <span>+$0.0072/s · calidad final premium</span>
+          </div>
+          <span class="tgl-price" id="ugc-upscale-price">+$0.072</span>
+        </label>
+        <div class="cost-box">
+          <div class="cost-row"><span>Generación (<span id="ugc-model-name">Wan 3.0</span>)</span><span class="cv" id="ugc-cost-gen">$0.40</span></div>
+          <div class="cost-row" id="ugc-upscale-row" style="display:none"><span>Escalado 1080p</span><span class="cv" id="ugc-cost-up">$0.072</span></div>
+          <div class="cost-row total"><span>Total estimado</span><span class="cv" id="ugc-cost-total">$0.40</span></div>
+        </div>
+        <button class="btn-primary full" onclick="mockGenerate('ugc')">▶ Crear Video UGC</button>
+        <div class="progress-wrap" id="ugc-progress" style="display:none">
+          <div class="progress-track"><div class="progress-fill" id="ugc-pfill"></div></div>
+          <div class="progress-label"><span class="dot-pulse">●</span><span id="ugc-pmsg">Generando...</span></div>
+        </div>
+        <div class="output-area" id="ugc-output">
+          <video id="ugc-output-video" controls loop playsinline></video>
+          <div class="output-actions">
+            <button class="btn-primary" onclick="downloadOutput('ugc')">⬇ Descargar</button>
+            <button class="btn-secondary" onclick="replicateCurrent('ugc')">🔁 Replicar / Editar</button>
+            <button class="btn-secondary" onclick="resetOutput('ugc')">Nueva generación</button>
+            <button class="btn-rh" id="rh-btn-ugc" onclick="mockUpscale('ugc')" style="display:none">⬆️ Escalar con RunningHub</button>
+          </div>
+          <div id="rh-progress-ugc" style="display:none;margin-top:.5rem;background:var(--bg3);border-radius:8px;padding:.6rem .8rem;font-size:.8rem;color:var(--text2)">
+            <span class="dot-pulse">●</span> <span id="rh-msg-ugc">Enviando a RunningHub...</span>
+          </div>
+          <div id="rh-result-ugc" style="display:none;margin-top:.5rem;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:.6rem .8rem;font-size:.8rem;color:var(--green)">
+            ✅ <strong>Video escalado a 1080p listo.</strong> <span id="rh-result-link-ugc"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─ TAB: IMAGES ─ -->
+    <div class="tab-pane" id="tab-images">
+      <div class="card">
+        <div class="eyebrow">Imágenes IA</div>
+        <div class="card-title">Modelos · Productos · Creativos</div>
+        <div class="info-banner">
+          <strong>Generación de imágenes</strong> con <span class="hi">FLUX, SDXL, Nano Banana, Grok y DALL·E 3</span>.<br>
+          Ideal para fotos de modelos, creativos de productos, banners y thumbnails.
+        </div>
+        <label class="field-label">Prompt de imagen</label>
+        <textarea class="prompt" style="min-height:90px" placeholder="Modelo femenina de 25 años, ropa casual elegante, estudio minimalista con luz natural suave, foto de moda editorial, alta calidad, 4K..."></textarea>
+        <label class="field-label" style="margin-bottom:.5rem">Tamaño / Aspecto</label>
+        <div class="size-chips" id="size-chips">
+          <div class="size-chip sel" onclick="selectSize(this,'1:1')">1:1 Cuadrado</div>
+          <div class="size-chip" onclick="selectSize(this,'9:16')">9:16 Vertical</div>
+          <div class="size-chip" onclick="selectSize(this,'16:9')">16:9 Landscape</div>
+          <div class="size-chip" onclick="selectSize(this,'4:5')">4:5 Portrait</div>
+          <div class="size-chip" onclick="selectSize(this,'3:2')">3:2 Foto</div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label class="field-label">Cantidad</label>
+            <select>
+              <option>1 imagen</option>
+              <option>2 imágenes</option>
+              <option>4 imágenes</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label">Estilo</label>
+            <select>
+              <option>Fotorrealista</option>
+              <option>Artístico</option>
+              <option>Cinematográfico</option>
+              <option>Editorial</option>
+              <option>Publicitario</option>
+            </select>
+          </div>
+        </div>
+        <div class="cost-box">
+          <div class="cost-row"><span>Modelo (<span id="img-model-name">FLUX Schnell</span>)</span><span class="cv" id="img-cost">$0.003</span></div>
+          <div class="cost-row total"><span>Total estimado</span><span class="cv" id="img-cost-total">$0.003</span></div>
+        </div>
+        <button class="btn-primary full" onclick="mockGenerateImg()">✦ Generar Imagen</button>
+        <div class="progress-wrap" id="img-progress" style="display:none">
+          <div class="progress-track"><div class="progress-fill" id="img-pfill"></div></div>
+          <div class="progress-label"><span class="dot-pulse">●</span><span id="img-pmsg">Generando...</span></div>
+        </div>
+        <div class="output-area" id="img-output" style="display:none">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem" id="img-grid"></div>
+          <div class="output-actions">
+            <button class="btn-primary" onclick="downloadAllImages()">⬇ Descargar todo</button>
+            <button class="btn-secondary" onclick="replicateCurrent('images')">🔁 Replicar / Editar</button>
+            <button class="btn-secondary" onclick="resetOutput('img')">Nueva generación</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─ TAB: VOICE ─ -->
+    <div class="tab-pane" id="tab-voice">
+      <div class="card">
+        <div class="eyebrow">Voz + Video</div>
+        <div class="card-title">TTS con ElevenLabs · Sincronizá con tu video</div>
+        <div class="info-banner">
+          <strong>Flujo:</strong> 1) Generá la voz con ElevenLabs · 2) Generá el video en Reels o UGC · 3) Combiná ambos en tu editor.<br>
+          <span class="hi">Pronto:</span> sincronización automática en servidor.
+        </div>
+        <div class="el-key-row">
+          <input type="password" class="api-input" placeholder="ElevenLabs API key: xi_..." id="el-api-key" />
+          <button class="btn-secondary" onclick="mockElCheck()">Verificar</button>
+        </div>
+        <div class="el-status" id="el-status">Sin clave · <a href="https://elevenlabs.io" target="_blank" style="color:var(--accent)">elevenlabs.io</a></div>
+        <hr class="sidebar-divider" />
+        <label class="field-label" style="margin-bottom:.6rem">Voces disponibles</label>
+        <div class="voice-grid" id="voice-grid">
+          <div class="voice-chip sel" onclick="selVoice(this)"><span class="vc-icon">👩</span><span><span>Rachel</span><span class="vc-meta">Femenina · EN</span></span></div>
+          <div class="voice-chip" onclick="selVoice(this)"><span class="vc-icon">👨</span><span><span>Adam</span><span class="vc-meta">Masculina · EN</span></span></div>
+          <div class="voice-chip" onclick="selVoice(this)"><span class="vc-icon">👩</span><span><span>Bella</span><span class="vc-meta">Femenina · EN</span></span></div>
+          <div class="voice-chip" onclick="selVoice(this)"><span class="vc-icon">👨</span><span><span>Antoni</span><span class="vc-meta">Masculina · EN</span></span></div>
+          <div class="voice-chip" onclick="selVoice(this)"><span class="vc-icon">🎤</span><span><span>Elli</span><span class="vc-meta">Femenina · EN</span></span></div>
+          <div class="voice-chip" onclick="selVoice(this)"><span class="vc-icon">🎤</span><span><span>Josh</span><span class="vc-meta">Masculina · EN</span></span></div>
+        </div>
+        <div class="row2" style="margin-bottom:.6rem">
+          <div class="field">
+            <label class="field-label">Estabilidad</label>
+            <div class="range-row">
+              <input type="range" min="0" max="100" value="50" style="accent-color:var(--purple)" />
+              <span class="range-val" style="color:var(--purple)">50</span>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field-label">Claridad</label>
+            <div class="range-row">
+              <input type="range" min="0" max="100" value="75" style="accent-color:var(--purple)" />
+              <span class="range-val" style="color:var(--purple)">75</span>
+            </div>
+          </div>
+        </div>
+        <label class="field-label">Texto para convertir a voz</label>
+        <textarea class="prompt" style="min-height:100px" placeholder="Hola, quiero mostrarte este producto increíble que cambió mi vida. Es perfecto para..."></textarea>
+        <div class="cost-box">
+          <div class="cost-row"><span>ElevenLabs (~1.000 caracteres)</span><span class="cv">$0.018</span></div>
+          <div class="cost-row total"><span>Total estimado</span><span class="cv">$0.018</span></div>
+        </div>
+        <button class="btn-primary full" onclick="mockTTS()">🎙 Generar Voz</button>
+        <div class="progress-wrap" id="voice-progress" style="display:none">
+          <div class="progress-track"><div class="progress-fill" id="voice-pfill"></div></div>
+          <div class="progress-label"><span class="dot-pulse">●</span><span id="voice-pmsg">Generando audio...</span></div>
+        </div>
+        <div class="output-area" id="voice-output" style="display:none">
+          <div style="background:var(--bg3);border-radius:10px;padding:1rem;display:flex;align-items:center;gap:1rem">
+            <button onclick="this.textContent=this.textContent==='▶'?'⏸':'▶'" style="width:42px;height:42px;background:var(--accent);border:none;border-radius:50%;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#1a0d2e;font-weight:700;flex-shrink:0">▶</button>
+            <div style="flex:1">
+              <div style="height:4px;background:var(--border2);border-radius:2px"><div style="height:100%;background:linear-gradient(90deg,var(--purple),var(--accent));border-radius:2px;width:0%;animation:voiceprog 3s ease forwards" id="voice-bar"></div></div>
+              <div style="font-size:.72rem;color:var(--muted);margin-top:.35rem" id="voice-dur">0:00 / 0:00</div>
+            </div>
+          </div>
+          <div class="output-actions">
+            <button class="btn-primary">⬇ Descargar MP3</button>
+            <button class="btn-secondary" onclick="resetOutput('voice')">Nueva voz</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── History (always visible) ── -->
+    <div class="card">
+      <div class="eyebrow">Historial</div>
+      <div class="card-title" style="margin-bottom:.75rem">Generaciones recientes</div>
+      <div class="history-list" id="history-list">
+        <div style="font-size:.8rem;color:var(--muted)">Todavía no hay generaciones.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══ RIGHT COLUMN ═══ -->
+  <div>
+
+    <!-- API Keys card -->
+    <div class="card" id="api-card">
+      <div class="eyebrow">Configuración</div>
+      <div class="card-title">API Keys</div>
+      <label class="field-label">Siray AI (videos e imágenes)</label>
+      <div class="api-row" style="margin-bottom:.5rem">
+        <input type="password" class="api-input" id="siray-key" placeholder="sk_..." />
+        <button class="btn-primary" onclick="mockSave('siray')">Guardar</button>
+      </div>
+      <div class="api-status" id="siray-status">Sin clave · <a href="https://console.siray.ai" target="_blank" style="color:var(--accent)">console.siray.ai</a></div>
+      <hr class="sidebar-divider" />
+      <label class="field-label">ElevenLabs (voz)</label>
+      <div class="api-row" style="margin-bottom:.5rem">
+        <input type="password" class="api-input" id="el-key-sidebar" placeholder="xi_..." />
+        <button class="btn-primary" onclick="mockSave('el')">Guardar</button>
+      </div>
+      <div class="api-status" id="el-status-sidebar">Sin clave · <a href="https://elevenlabs.io" target="_blank" style="color:var(--accent)">elevenlabs.io</a></div>
+      <hr class="sidebar-divider" />
+      <label class="field-label">RunningHub (escalador)</label>
+      <div class="api-row" style="margin-bottom:.5rem">
+        <input type="password" class="api-input" id="rh-key" placeholder="rh_..." />
+        <button class="btn-primary" onclick="mockSave('rh')">Guardar</button>
+      </div>
+      <div style="margin-bottom:.5rem">
+        <input type="text" class="api-input" id="rh-workflow" placeholder="ID del workflow de escalado" style="width:100%;font-size:.8rem" value="2109479700715646977" />
+        <div style="font-size:.7rem;color:var(--muted);margin-top:.25rem">✅ Workflow ganador pre-configurado · podés cambiarlo</div>
+      </div>
+      <div class="api-status" id="rh-status">Sin clave · <a href="https://runninghub.ai" target="_blank" style="color:var(--accent)">runninghub.ai</a></div>
+    </div>
+
+    <!-- Model selector (context-aware) -->
+    <div class="card" id="model-card">
+      <div class="eyebrow" id="model-card-eye">Motor de video</div>
+      <div class="card-title" id="model-card-title">Elegí el modelo</div>
+      <div class="model-list" id="model-list"></div>
+      <div class="info-banner" id="model-tip" style="margin-bottom:0">
+        <strong>✅ Wan 3.0 + escalado</strong> = <span class="hi">~$0.71 / clip 15s</span><br>
+        La opción más rentable con calidad 1080p final.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<style>
+@keyframes voiceprog { to { width: 72%; } }
+.btn-rh {
+  background: rgba(34,197,94,.15);
+  border: 1px solid rgba(34,197,94,.45);
+  color: #4ade80;
+  padding: .42rem .9rem;
+  border-radius: 8px;
+  font-size: .8rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background .15s, border-color .15s;
+}
+.btn-rh:hover { background: rgba(34,197,94,.25); border-color: rgba(34,197,94,.7); }
+</style>
+
+<script>
+// ── Models per category ──────────────────────────────────────────────────────
+const CATS = {
+  reels: {
+    eyebrow: 'Motor · Reels & Social',
+    title: 'Elegí el modelo',
+    tip: '✅ Wan 3.0 + escalado = <span class="hi">~$0.71 / clip 15s</span><br>Ideal para TikTok e Instagram.',
+    models: {
+      'wan3': { name:'Wan 3.0', badge:'RECOMENDADO', bc:'', desc:'Movimientos naturales, expresiones, danza.', maxDur:15, price:0.040, res:['480p','720p'], needsRef:false },
+      'wan3-spicy': { name:'Wan 3.0 Spicy', badge:'🔞 SIN CENSURA', bc:'red', desc:'Igual que Wan 3.0 pero sin restricciones de contenido. Hasta 1080p.', maxDur:15, price:0.045, res:['480p','720p','1080p'], needsRef:false },
+      'kling': { name:'Kling Motion', badge:'', bc:'', desc:'Coreografías, cámara fija, bailes limpios.', maxDur:10, price:0.090, res:['720p'], needsRef:false },
+      'kling-spicy': { name:'Kling Master (sin censura)', badge:'🔞 SIN CENSURA', bc:'red', desc:'Kling v2.0 sin filtros, ideal para bailes y movimientos corporales libres.', maxDur:10, price:0.090, res:['720p'], needsRef:false },
+      'minimax-v01': { name:'MiniMax Video-01', badge:'', bc:'', desc:'Alta calidad de movimiento y expresiones faciales. Muy bueno para personas.', maxDur:6, price:0.110, res:['720p'], needsRef:false },
+      'minimax-live': { name:'MiniMax Video-01 Live', badge:'POTENTE', bc:'', desc:'Versión Live: movimiento hiper-realista, ideal para reels de avatares y UGC.', maxDur:6, price:0.130, res:['720p','1080p'], needsRef:false },
+      'minimax-live-spicy': { name:'MiniMax Live (sin censura)', badge:'🔞 SIN CENSURA', bc:'red', desc:'MiniMax Video-01 Live sin filtros de contenido.', maxDur:6, price:0.130, res:['720p','1080p'], needsRef:false },
+      'seedance-20': { name:'Seedance 2.0', badge:'NUEVO', bc:'', desc:'Mayor coherencia temporal y mejor calidad de movimiento que 1.0.', maxDur:10, price:0.160, res:['480p','720p'], needsRef:false },
+      'seedance-25': { name:'Seedance 2.5', badge:'TOP', bc:'gb', desc:'Última versión de Seedance, físicas ultra-realistas y manos perfectas.', maxDur:10, price:0.190, res:['480p','720p','1080p'], needsRef:false },
+      'wan3-ref': { name:'Wan 3.0 Ref2V', badge:'VIDEO REF', bc:'pb', desc:'Cloná movimientos desde un video de referencia. Ideal para coreografías y danzas.', maxDur:15, price:0.040, res:['480p','720p'], needsRef:true },
+    }
+  },
+  ugc: {
+    eyebrow: 'Motor · UGC Videos',
+    title: 'Elegí el modelo',
+    tip: '✅ <span class="hi">Seedance 2.5</span> para físicas complejas y manos sosteniendo productos.',
+    models: {
+      'wan3': { name:'Wan 3.0', badge:'RECOMENDADO', bc:'', desc:'Diálogo natural, manos, varias personas.', maxDur:15, price:0.040, res:['480p','720p'], needsRef:false },
+      'wan3-spicy': { name:'Wan 3.0 Spicy', badge:'🔞 SIN CENSURA', bc:'red', desc:'Sin restricciones de contenido. Hasta 1080p.', maxDur:15, price:0.045, res:['480p','720p','1080p'], needsRef:false },
+      'minimax-v01': { name:'MiniMax Video-01', badge:'', bc:'', desc:'Alta calidad de movimiento y expresiones faciales. Muy bueno para UGC.', maxDur:6, price:0.110, res:['720p'], needsRef:false },
+      'minimax-live': { name:'MiniMax Video-01 Live', badge:'POTENTE', bc:'', desc:'Movimiento hiper-realista, ideal para demos de productos y avatares.', maxDur:6, price:0.130, res:['720p','1080p'], needsRef:false },
+      'minimax-live-spicy': { name:'MiniMax Live (sin censura)', badge:'🔞 SIN CENSURA', bc:'red', desc:'MiniMax Video-01 Live sin filtros de contenido.', maxDur:6, price:0.130, res:['720p','1080p'], needsRef:false },
+      'seedance': { name:'Seedance 1.0', badge:'', bc:'', desc:'Físicas complejas, movimientos rápidos, manos.', maxDur:10, price:0.134, res:['480p','720p'], needsRef:false },
+      'seedance-20': { name:'Seedance 2.0', badge:'NUEVO', bc:'', desc:'Mayor coherencia temporal y mejor calidad de movimiento que 1.0.', maxDur:10, price:0.160, res:['480p','720p'], needsRef:false },
+      'seedance-25': { name:'Seedance 2.5', badge:'TOP', bc:'gb', desc:'Última versión, físicas ultra-realistas, ideal para manos con productos.', maxDur:10, price:0.190, res:['480p','720p','1080p'], needsRef:false },
+      'veo3': { name:'Veo 3', badge:'BETA', bc:'gb', desc:'Modelo de Google, alta calidad cinematográfica.', maxDur:8, price:0.240, res:['720p','1080p'], needsRef:false },
+      'wan3-ref': { name:'Wan 3.0 Ref2V', badge:'VIDEO REF', bc:'pb', desc:'Cloná movimientos desde un video de referencia.', maxDur:15, price:0.040, res:['480p','720p'], needsRef:true },
+    }
+  },
+  images: {
+    eyebrow: 'Motor · Imágenes IA',
+    title: 'Elegí el modelo',
+    tip: '<strong>FLUX Schnell</strong> = rápido y económico (~$0.003/img) · <span class="hi">Nano Banana 2.1</span> = top calidad · <span class="hi">Grok Aurora</span> = fotorrealismo',
+    models: {
+      'flux-schnell': { name:'FLUX Schnell', badge:'RÁPIDO', bc:'', desc:'Generación en ~3s, ideal para drafts y pruebas.', maxDur:0, price:0.003, res:[], needsRef:false },
+      'flux-dev': { name:'FLUX Dev', badge:'CALIDAD', bc:'', desc:'Mejor coherencia y detalle. Ideal para publicar.', maxDur:0, price:0.025, res:[], needsRef:false },
+      'sdxl': { name:'SDXL 1.0', badge:'', bc:'', desc:'Estilo artístico, ilustraciones, render 3D.', maxDur:0, price:0.006, res:[], needsRef:false },
+      'nano-banana-2': { name:'Nano Banana 2', badge:'', bc:'', desc:'Alta fidelidad de detalles y texturas. Muy bueno para productos.', maxDur:0, price:0.018, res:[], needsRef:false },
+      'nano-banana-21': { name:'Nano Banana 2.1', badge:'NUEVO', bc:'', desc:'Versión mejorada con mejor coherencia y resolución hasta 2K.', maxDur:0, price:0.022, res:[], needsRef:false },
+      'grok-aurora': { name:'Grok Aurora (xAI)', badge:'FOTO', bc:'', desc:'Fotorrealismo extremo generado por xAI. Muy natural en personas.', maxDur:0, price:0.020, res:[], needsRef:false },
+      'dalle3': { name:'DALL·E 3 (OpenAI)', badge:'', bc:'', desc:'Generación guiada por prompt preciso. Excelente en escenas complejas.', maxDur:0, price:0.040, res:[], needsRef:false },
+      'flux-schnell-spicy': { name:'FLUX Schnell Spicy', badge:'🔞 SIN CENSURA', bc:'red', desc:'Versión sin restricciones de FLUX Schnell. Mismo precio, sin filtros.', maxDur:0, price:0.003, res:[], needsRef:false },
+      'flux-dev-spicy': { name:'FLUX Dev Spicy', badge:'🔞 SIN CENSURA', bc:'red', desc:'FLUX Dev sin censura, máxima calidad sin restricciones de contenido.', maxDur:0, price:0.025, res:[], needsRef:false },
+      'pony-diffusion': { name:'Pony Diffusion XL', badge:'🔞 SIN CENSURA', bc:'red', desc:'Modelo sin censura popular para ilustración, anime y contenido adulto.', maxDur:0, price:0.006, res:[], needsRef:false },
+    }
+  },
+  voice: {
+    eyebrow: 'ElevenLabs · TTS',
+    title: 'Configuración de voz',
+    tip: 'Los primeros <span class="hi">10.000 caracteres/mes son gratis</span> en el plan Free de ElevenLabs.',
+    models: {}
+  }
+};
+
+let selModels = { reels:'wan3', ugc:'wan3', images:'flux-schnell', voice:'' };
+let currentTab = 'reels';
+let imgSelSize = '1:1';
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+function init() {
+  try {
+    const k = localStorage.getItem('siray_key_demo');
+    if (k) { document.getElementById('siray-key').value = k; showSirayStatus(k); }
+  } catch {}
+  try {
+    const rk = localStorage.getItem('rh_key_demo');
+    const rwf = localStorage.getItem('rh_workflow_demo') || '2109479700715646977';
+    document.getElementById('rh-workflow').value = rwf;
+    if (rk) {
+      document.getElementById('rh-key').value = rk;
+      showRhStatus(rk, rwf);
+    }
+  } catch {}
+  renderModels('reels');
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.cat-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  btn.classList.add('active');
+  currentTab = tab;
+  renderModels(tab);
+  if (typeof RocketMascot !== 'undefined') RocketMascot.onTabSwitch(tab);
+}
+
+// ── Models ────────────────────────────────────────────────────────────────────
+function renderModels(tab) {
+  const cat = CATS[tab];
+  document.getElementById('model-card-eye').textContent = cat.eyebrow;
+  document.getElementById('model-card-title').textContent = cat.title;
+  document.getElementById('model-tip').innerHTML = cat.tip;
+  const list = document.getElementById('model-list');
+  list.innerHTML = '';
+  if (Object.keys(cat.models).length === 0) {
+    document.getElementById('model-card').style.display = 'none';
+    return;
+  }
+  document.getElementById('model-card').style.display = '';
+  const sel = selModels[tab];
+  for (const [k, m] of Object.entries(cat.models)) {
+    const d = document.createElement('div');
+    d.className = 'model-card' + (k === sel ? ' sel' : '');
+    d.onclick = () => pickModel(tab, k);
+    const priceStr = tab === 'images' ? `$${m.price.toFixed(3)}/imagen` : `$${m.price.toFixed(3)}/s · max ${m.maxDur}s`;
+    d.innerHTML = `
+      <div class="mc-head">
+        <strong>${m.name}</strong>
+        ${m.badge ? `<span class="mc-badge ${m.bc}">${m.badge}</span>` : ''}
+        ${tab !== 'images' ? `<span class="mc-dur">max ${m.maxDur}s</span>` : ''}
+      </div>
+      <div class="mc-desc">${m.desc}</div>
+      <div class="mc-price">${priceStr}</div>
+    `;
+    list.appendChild(d);
+  }
+  updateCost(tab);
+}
+
+function pickModel(tab, key) {
+  selModels[tab] = key;
+  document.querySelectorAll('#model-list .model-card').forEach((el, i) => {
+    el.classList.toggle('sel', Object.keys(CATS[tab].models)[i] === key);
+  });
+  const m = CATS[tab].models[key];
+  // Ref video toggle for UGC and Reels
+  if (tab === 'ugc' || tab === 'reels') {
+    const refVid = document.getElementById(tab + '-ref-video-zone');
+    const refImg = document.getElementById(tab + '-ref-img-zone');
+    const warn = document.getElementById(tab + '-ref2v-warn');
+    if (m.needsRef) {
+      if (refVid) refVid.style.display = '';
+      if (refImg) refImg.style.display = 'none';
+      if (warn) warn.style.display = '';
+    } else {
+      if (refVid) refVid.style.display = 'none';
+      if (refImg) refImg.style.display = '';
+      if (warn) warn.style.display = 'none';
+    }
+  }
+  // Image model cost
+  if (tab === 'images') {
+    document.getElementById('img-model-name').textContent = m.name;
+    document.getElementById('img-cost').textContent = '$' + m.price.toFixed(3);
+    document.getElementById('img-cost-total').textContent = '$' + m.price.toFixed(3);
+    return;
+  }
+  // Adjust duration max
+  if (tab !== 'images' && tab !== 'voice') {
+    const dur = document.getElementById(tab + '-dur-val');
+    const durSlider = dur.closest('.range-row').querySelector('input');
+    durSlider.max = m.maxDur;
+    if (+durSlider.value > m.maxDur) { durSlider.value = m.maxDur; setDur(tab, m.maxDur); }
+    if (document.getElementById(tab + '-model-name')) document.getElementById(tab + '-model-name').textContent = m.name;
+  }
+  updateCost(tab);
+}
+
+// ── Duration ──────────────────────────────────────────────────────────────────
+function setDur(tab, v) {
+  if (document.getElementById(tab + '-dur-val')) document.getElementById(tab + '-dur-val').textContent = v + 's';
+  if (document.getElementById(tab + '-dur-disp')) document.getElementById(tab + '-dur-disp').textContent = v + 's';
+  updateCost(tab);
+}
+
+// ── Cost ──────────────────────────────────────────────────────────────────────
+function updateCost(tab) {
+  if (tab === 'images' || tab === 'voice') return;
+  const m = CATS[tab].models[selModels[tab]];
+  if (!m) return;
+  const durEl = document.getElementById(tab + '-dur-val');
+  const dur = durEl ? parseInt(durEl.textContent) || 10 : 10;
+  const upCheck = document.getElementById(tab + '-upscale');
+  const up = upCheck ? upCheck.checked : false;
+  const gen = m.price * dur;
+  const upCost = up ? 0.0072 * dur : 0;
+  const total = gen + upCost;
+  if (document.getElementById(tab + '-cost-gen')) document.getElementById(tab + '-cost-gen').textContent = '$' + gen.toFixed(3);
+  if (document.getElementById(tab + '-cost-total')) document.getElementById(tab + '-cost-total').textContent = '$' + total.toFixed(3);
+  if (document.getElementById(tab + '-upscale-price')) document.getElementById(tab + '-upscale-price').textContent = '+$' + (0.0072 * dur).toFixed(3);
+  const upRow = document.getElementById(tab + '-upscale-row');
+  if (upRow) {
+    upRow.style.display = up ? '' : 'none';
+    if (document.getElementById(tab + '-cost-up')) document.getElementById(tab + '-cost-up').textContent = '$' + upCost.toFixed(3);
+  }
+}
+
+// ── Upload con previsualización ───────────────────────────────────────────────
+function mockUpload(zone, type) {
+  // delegate click to the hidden file input
+  const inp = zone.querySelector('input[type=file]');
+  if (inp) { inp.click(); }
+}
+
+document.addEventListener('change', function(e) {
+  if (e.target.type !== 'file') return;
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  const zone = e.target.closest('.drop-zone');
+  if (!zone) return;
+  zone.classList.add('has-file');
+  const isVideo = file.type.startsWith('video/');
+  if (isVideo) {
+    zone.querySelector('.dz-icon').textContent = '✅';
+    zone.querySelector('.dz-label').textContent = file.name.length > 22 ? file.name.slice(0,20)+'…' : file.name;
+  } else {
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      // remove any existing preview
+      const old = zone.querySelector('.dz-preview-img');
+      if (old) old.remove();
+      const img = document.createElement('img');
+      img.src = ev.target.result;
+      img.className = 'dz-preview-img';
+      img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit;opacity:.55;pointer-events:none;';
+      zone.style.position = 'relative';
+      zone.appendChild(img);
+      zone.querySelector('.dz-icon').textContent = '✅';
+      zone.querySelector('.dz-label').textContent = file.name.length > 22 ? file.name.slice(0,20)+'…' : file.name;
+    };
+    reader.readAsDataURL(file);
+  }
+});
+
+// ── Mock generation ───────────────────────────────────────────────────────────
+async function mockGenerate(tab) {
+  const sirayKey = localStorage.getItem('siray_key_demo');
+  if (!sirayKey) { alert('Guardá tu clave de Siray AI primero.'); return; }
+
+  const tabEl = document.getElementById('tab-' + tab);
+  const imageInput = tabEl.querySelector('.drop-zone:first-of-type input[type=file]');
+  if (!imageInput || !imageInput.files || !imageInput.files[0]) {
+    alert('Seleccioná una imagen de avatar primero.'); return;
+  }
+
+  const pg = document.getElementById(tab + '-progress');
+  const fill = document.getElementById(tab + '-pfill');
+  const msg = document.getElementById(tab + '-pmsg');
+  const output = document.getElementById(tab + '-output');
+  pg.style.display = ''; output.style.display = 'none';
+  fill.style.width = '5%'; msg.textContent = 'Subiendo imagen...';
+
+  try {
+    // 1. Upload image
+    const formImg = new FormData();
+    formImg.append('file', imageInput.files[0]);
+    const upResp = await fetch('/api/upload-image', { method:'POST', body: formImg });
+    if (!upResp.ok) throw new Error('Error subiendo imagen: ' + (await upResp.text()));
+    const { filename } = await upResp.json();
+
+    fill.style.width = '15%'; msg.textContent = 'Enviando a Siray AI...';
+
+    // 2. Submit generation
+    const modelKey = selModels[tab];
+    const m = CATS[tab].models[modelKey];
+    const durEl = document.getElementById(tab + '-dur-val');
+    const dur = durEl ? parseInt(durEl.textContent) || 10 : 10;
+    const resEl = tabEl.querySelector('select');
+    const resolution = resEl ? resEl.value : '480p';
+
+    // ref video (Ref2V)
+    let refVideoFilename = '';
+    const refVidZone = document.getElementById(tab + '-ref-video-zone');
+    if (refVidZone && refVidZone.style.display !== 'none') {
+      const refVidInput = refVidZone.querySelector('input[type=file]');
+      if (refVidInput && refVidInput.files && refVidInput.files[0]) {
+        const rfForm = new FormData();
+        rfForm.append('file', refVidInput.files[0]);
+        const rfResp = await fetch('/api/upload-video', { method:'POST', body: rfForm });
+        if (rfResp.ok) { const rfData = await rfResp.json(); refVideoFilename = rfData.filename || ''; }
+      }
+    }
+
+    const promptEl = tabEl.querySelector('.prompt');
+    const prompt = promptEl ? promptEl.value : '';
+
+    const genForm = new FormData();
+    genForm.append('api_key', sirayKey);
+    genForm.append('model_key', modelKey);
+    genForm.append('image_filename', filename);
+    genForm.append('prompt', prompt);
+    genForm.append('duration', dur);
+    genForm.append('resolution', resolution);
+    if (refVideoFilename) genForm.append('ref_video_filename', refVideoFilename);
+
+    const genResp = await fetch('/api/generate', { method:'POST', body: genForm });
+    if (!genResp.ok) throw new Error('Error generando: ' + (await genResp.text()));
+    const { task_id } = await genResp.json();
+
+    fill.style.width = '25%'; msg.textContent = 'En cola de Siray AI...';
+
+    // 3. Poll status
+    let videoUrl = null;
+    const pollMsgs = ['Generando frames...', 'Procesando movimiento...', 'Renderizando...', 'Casi listo...'];
+    let pollStep = 0;
+    for (let attempt = 0; attempt < 180; attempt++) {
+      await new Promise(r => setTimeout(r, 3000));
+      const stResp = await fetch(`/api/status/${task_id}?api_key=${encodeURIComponent(sirayKey)}`);
+      if (!stResp.ok) continue;
+      const st = await stResp.json();
+      const pct = Math.min(25 + attempt * 1.2, 92);
+      fill.style.width = pct + '%';
+      if (pollStep < pollMsgs.length) msg.textContent = pollMsgs[Math.floor(pollStep++)];
+      if (st.status === 'completed' && st.video_url) { videoUrl = st.video_url; break; }
+      if (st.status === 'failed') throw new Error('Generación fallida en Siray AI');
+    }
+    if (!videoUrl) throw new Error('Tiempo de espera agotado');
+
+    fill.style.width = '100%'; msg.textContent = '✓ Completado';
+    await new Promise(r => setTimeout(r, 400));
+    pg.style.display = 'none';
+    output.style.display = 'block';
+
+    const vid = document.getElementById(tab + '-output-video');
+    if (vid) { vid.src = videoUrl; vid.load(); }
+
+    addHistory(tab, videoUrl);
+    if (typeof RocketMascot !== 'undefined') RocketMascot.celebrate();
+
+    // show RH upscale button if key is set
+    try {
+      const rhk = localStorage.getItem('rh_key_demo');
+      const rhBtn = document.getElementById('rh-btn-' + tab);
+      if (rhk && rhBtn) {
+        rhBtn.style.display = '';
+        rhBtn.disabled = false;
+        rhBtn.textContent = '⬆️ Escalar con RunningHub';
+        document.getElementById('rh-progress-' + tab).style.display = 'none';
+        document.getElementById('rh-result-' + tab).style.display = 'none';
+      }
+    } catch {}
+
+  } catch(err) {
+    pg.style.display = 'none';
+    alert('Error: ' + err.message);
+  }
+}
+
+function mockGenerateImg() {
+  const pg = document.getElementById('img-progress');
+  const fill = document.getElementById('img-pfill');
+  const msg = document.getElementById('img-pmsg');
+  const output = document.getElementById('img-output');
+  const grid = document.getElementById('img-grid');
+  pg.style.display = ''; output.style.display = 'none';
+  let pct = 5;
+  const iv = setInterval(() => { pct = Math.min(pct + 15, 95); fill.style.width = pct + '%'; }, 300);
+  setTimeout(() => {
+    clearInterval(iv);
+    fill.style.width = '100%';
+    msg.textContent = '✓ Imagen generada';
+    setTimeout(() => {
+      pg.style.display = 'none';
+      grid.innerHTML = `<div style="background:linear-gradient(135deg,var(--bg3),var(--bg4));border-radius:10px;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:2rem">🖼️</div>`;
+      output.style.display = 'block';
+      addHistory('images');
+    }, 400);
+  }, 2800);
+}
+
+function mockTTS() {
+  const pg = document.getElementById('voice-progress');
+  const fill = document.getElementById('voice-pfill');
+  const msg = document.getElementById('voice-pmsg');
+  const output = document.getElementById('voice-output');
+  pg.style.display = ''; output.style.display = 'none';
+  let pct = 10;
+  const iv = setInterval(() => { pct = Math.min(pct + 20, 95); fill.style.width = pct + '%'; }, 300);
+  setTimeout(() => {
+    clearInterval(iv);
+    fill.style.width = '100%';
+    msg.textContent = '✓ Audio generado';
+    setTimeout(() => {
+      pg.style.display = 'none';
+      output.style.display = 'block';
+      document.getElementById('voice-bar').style.animation = 'none';
+      document.getElementById('voice-bar').style.width = '0%';
+      void document.getElementById('voice-bar').offsetHeight;
+      document.getElementById('voice-bar').style.animation = 'voiceprog 3s ease forwards';
+      document.getElementById('voice-dur').textContent = '0:00 / 0:24';
+      addHistory('voice');
+    }, 400);
+  }, 2000);
+}
+
+// ── History ───────────────────────────────────────────────────────────────────
+let histItems = [];
+const catLabels = { reels:'Reels', ugc:'UGC', images:'Imagen', voice:'Voz' };
+function addHistory(tab, videoUrl) {
+  const m = CATS[tab].models[selModels[tab]];
+  const durEl = document.getElementById(tab + '-dur-val');
+  const dur = durEl ? parseInt(durEl.textContent) || 10 : 10;
+  const promptEl = document.querySelector('#tab-' + tab + ' .prompt');
+  const prompt = promptEl ? promptEl.value : '';
+  const price = tab === 'images' ? (m ? m.price : 0.003) : tab === 'voice' ? 0.018 : (m ? m.price * dur : 0.40);
+  histItems.unshift({ tab, cat: catLabels[tab], model: m ? m.name : 'ElevenLabs', modelKey: selModels[tab], cost: price.toFixed(3), prompt, dur, video_url: videoUrl || null });
+  renderHistory();
+}
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  list.innerHTML = histItems.slice(0, 8).map((h, i) => `
+    <div class="hist-item">
+      <div class="hist-dot ok"></div>
+      <div class="hist-info" style="flex:1;min-width:0">
+        <div class="hist-cat">${h.cat} · ${h.model}${h.scaled ? ' <span style="background:rgba(34,197,94,.2);border:1px solid rgba(34,197,94,.4);color:#4ade80;font-size:.65rem;padding:.1rem .35rem;border-radius:4px;font-weight:600">📹 1080p</span>' : ''}</div>
+        <div class="hist-prompt" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px">${h.prompt || '—'}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:.4rem;flex-shrink:0">
+        <div class="hist-cost">$${h.cost}</div>
+        <button onclick="replicateFromHistory(${i})" style="background:rgba(123,63,203,.25);border:1px solid rgba(123,63,203,.5);color:var(--accent);font-size:.7rem;padding:.2rem .5rem;border-radius:6px;cursor:pointer;font-family:inherit">🔁</button>
+      </div>
+    </div>
+  `).join('');
+}
+function replicateCurrent(tab) {
+  // just scroll to top of tab and highlight prompt so user can edit
+  const promptEl = document.querySelector('#tab-' + tab + ' .prompt');
+  if (promptEl) { promptEl.focus(); promptEl.select(); promptEl.scrollIntoView({ behavior:'smooth', block:'center' }); }
+}
+function replicateFromHistory(idx) {
+  const h = histItems[idx];
+  if (!h || !h.tab) return;
+  // switch to the right tab
+  const tabBtn = document.querySelector(`.cat-tab[data-tab="${h.tab}"]`);
+  if (tabBtn) switchTab(h.tab, tabBtn);
+  // restore model
+  setTimeout(() => {
+    const sel = document.querySelector(`#tab-${h.tab} select`);
+    if (sel && h.modelKey) { sel.value = h.modelKey; selModels[h.tab] = h.modelKey; updateCost(h.tab); renderModels(h.tab); }
+    // restore prompt
+    const promptEl = document.querySelector(`#tab-${h.tab} .prompt`);
+    if (promptEl && h.prompt) { promptEl.value = h.prompt; promptEl.focus(); promptEl.scrollIntoView({ behavior:'smooth', block:'center' }); }
+    // restore duration
+    if (h.dur) {
+      const slider = document.querySelector(`#tab-${h.tab} input[type=range]`);
+      if (slider) { slider.value = h.dur; setDur(h.tab, h.dur); updateCost(h.tab); }
+    }
+  }, 80);
+}
+function downloadOutput(tab) {
+  const vid = document.getElementById(tab + '-output-video');
+  const src = vid ? vid.src : '';
+  if (src) {
+    navigator.clipboard.writeText(src).then(() => {
+      alert('URL del video copiada al portapapeles. En la app real el video se descarga directamente.');
+    }).catch(() => {
+      alert('URL del video: ' + src);
+    });
+  } else {
+    alert('En la app real, el video generado se descarga directamente desde Siray.');
+  }
+}
+async function mockUpscale(tab) {
+  const btn = document.getElementById('rh-btn-' + tab);
+  const pg = document.getElementById('rh-progress-' + tab);
+  const msg = document.getElementById('rh-msg-' + tab);
+  const result = document.getElementById('rh-result-' + tab);
+  if (!btn || !pg) return;
+
+  const rhKey = localStorage.getItem('rh_key_demo');
+  const rhWorkflow = localStorage.getItem('rh_workflow_demo') || '2109479700715646977';
+  if (!rhKey) { alert('Guardá tu clave de RunningHub primero.'); return; }
+
+  // Get video URL from most recent matching history item or from the video element
+  const vidEl = document.getElementById(tab + '-output-video');
+  const hi = histItems.findIndex(h => h.tab === tab);
+  const videoUrl = (hi !== -1 && histItems[hi].video_url) ? histItems[hi].video_url : (vidEl ? vidEl.src : '');
+  if (!videoUrl) { alert('No hay video generado para escalar.'); return; }
+
+  btn.disabled = true; btn.textContent = '⏳ Escalando...';
+  pg.style.display = ''; result.style.display = 'none';
+
+  const steps = ['Subiendo video a RunningHub...', 'En cola de procesamiento...', 'Escalando a 1080p (x4)...', 'Mejorando detalles...', 'Finalizando...'];
+  let s = 0;
+  const iv = setInterval(() => { if (s < steps.length) msg.textContent = steps[s++]; }, 3000);
+
+  try {
+    // Submit upscale job
+    const form = new FormData();
+    form.append('rh_api_key', rhKey);
+    form.append('rh_workflow_id', rhWorkflow);
+    form.append('video_url', videoUrl);
+    const subResp = await fetch('/api/upscale', { method:'POST', body: form });
+    if (!subResp.ok) throw new Error('RH submit: ' + (await subResp.text()));
+    const { task_id } = await subResp.json();
+
+    // Poll for result
+    let scaledUrl = null;
+    for (let attempt = 0; attempt < 120; attempt++) {
+      await new Promise(r => setTimeout(r, 4000));
+      const stResp = await fetch(`/api/upscale-status/${task_id}?rh_api_key=${encodeURIComponent(rhKey)}`);
+      if (!stResp.ok) continue;
+      const st = await stResp.json();
+      if (st.status === 'completed' && st.video_url) { scaledUrl = st.video_url; break; }
+      if (st.status === 'failed') throw new Error('RunningHub reportó falla en el escalado');
+    }
+    if (!scaledUrl) throw new Error('Tiempo de espera agotado en RunningHub');
+
+    clearInterval(iv);
+    pg.style.display = 'none';
+    result.style.display = '';
+    btn.style.display = 'none';
+
+    // Show download link
+    const linkEl = document.getElementById('rh-result-link-' + tab);
+    if (linkEl) linkEl.innerHTML = `<a href="${scaledUrl}" target="_blank" style="color:#4ade80;font-weight:600">⬇ Descargar 1080p</a>`;
+
+    // Update video element to scaled version
+    if (vidEl) { vidEl.src = scaledUrl; vidEl.load(); }
+
+    // Mark history
+    if (hi !== -1) { histItems[hi].scaled = true; histItems[hi].video_url = scaledUrl; renderHistory(); }
+
+  } catch(err) {
+    clearInterval(iv);
+    pg.style.display = 'none';
+    btn.disabled = false; btn.textContent = '⬆️ Escalar con RunningHub';
+    alert('Error escalando: ' + err.message);
+  }
+}
+function downloadAllImages() {
+  const imgs = document.querySelectorAll('#img-grid img');
+  if (!imgs.length) { alert('En la app real, las imágenes generadas se descargan desde el servidor.'); return; }
+  imgs.forEach((img, i) => {
+    try {
+      navigator.clipboard.writeText(img.src);
+    } catch(e) {}
+  });
+  alert('URLs de imágenes copiadas. En la app real se descargan directamente.');
+}
+
+// ── Size chips ────────────────────────────────────────────────────────────────
+function selectSize(el, size) {
+  imgSelSize = size;
+  document.querySelectorAll('.size-chip').forEach(c => c.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+// ── Voice ─────────────────────────────────────────────────────────────────────
+function selVoice(el) {
+  document.querySelectorAll('.voice-chip').forEach(c => c.classList.remove('sel'));
+  el.classList.add('sel');
+}
+function mockElCheck() {
+  document.getElementById('el-status').innerHTML = '<span style="color:var(--green)">✓ Conectado · 9.842 chars restantes este mes</span>';
+}
+
+// ── API mock ──────────────────────────────────────────────────────────────────
+function mockSave(svc) {
+  if (svc === 'siray') {
+    const v = document.getElementById('siray-key').value;
+    if (!v) return;
+    try { localStorage.setItem('siray_key_demo', v); } catch {}
+    showSirayStatus(v);
+  } else if (svc === 'rh') {
+    const k = document.getElementById('rh-key').value;
+    const wf = document.getElementById('rh-workflow').value;
+    if (!k) return;
+    try { localStorage.setItem('rh_key_demo', k); localStorage.setItem('rh_workflow_demo', wf); } catch {}
+    showRhStatus(k, wf);
+  } else {
+    document.getElementById('el-status-sidebar').innerHTML = '<span style="color:var(--green)">✓ ElevenLabs conectado</span>';
+    document.getElementById('key-badge').innerHTML = '<span class="dot"></span> Conectado';
+  }
+}
+async function showSirayStatus(k) {
+  const m = k.slice(0,6) + '...' + k.slice(-4);
+  document.getElementById('siray-status').innerHTML = `<span class="ok">✓ Clave guardada: ${m}</span> · Saldo: <span class="bal">...</span>`;
+  document.getElementById('key-badge').innerHTML = '<span class="dot"></span> Siray OK';
+  try {
+    const fd = new FormData(); fd.append('api_key', k);
+    const r = await fetch('/api/balance', { method:'POST', body: fd });
+    if (r.ok) {
+      const d = await r.json();
+      const bal = d.balance >= 0 ? '$' + d.balance.toFixed(3) : 'error';
+      document.getElementById('siray-status').innerHTML = `<span class="ok">✓ Clave guardada: ${m}</span> · Saldo: <span class="bal">${bal}</span>`;
+    }
+  } catch {}
+}
+function showRhStatus(k, wf) {
+  const m = k.slice(0,6) + '...' + k.slice(-4);
+  const wfLabel = wf ? ` · Workflow: <strong>${wf.slice(0,12)}${wf.length>12?'…':''}</strong>` : '';
+  document.getElementById('rh-status').innerHTML = `<span class="ok">✓ RunningHub OK: ${m}</span>${wfLabel}`;
+  // show upscale buttons on video outputs
+  ['reels','ugc'].forEach(tab => {
+    const btn = document.getElementById('rh-btn-' + tab);
+    if (btn) btn.style.display = '';
+  });
+}
+function showApiModal() { document.getElementById('api-card').scrollIntoView({ behavior:'smooth' }); }
+
+function resetOutput(tab) {
+  const o = document.getElementById(tab + '-output');
+  if (o) o.style.display = 'none';
+}
+
+// ── Rocket Mascot ─────────────────────────────────────────────────────────────
+const RocketMascot = (() => {
+  const TIPS = {
+    reels: [
+      '🎯 Usá una foto clara del avatar con buena iluminación frontal para mejores resultados.',
+      '💃 Incluí en el prompt palabras como "dancing confidently" o "walking on runway" para movimientos expresivos.',
+      '📱 Wan 3.0 genera movimientos naturales de cámara — ideal para TikTok e Instagram Reels.',
+      '✨ Activá el upscale con RunningHub para llevar tu reel a calidad premium antes de publicar.',
+      '🎬 El modelo Wan 3.0 Uncensored permite ropa ajustada y poses más atrevidas para contenido de moda.',
+    ],
+    ugc: [
+      '🛍️ Para UGC, mostrá el producto en el prompt: "holding a bottle of skincare, smiling at camera".',
+      '🎤 Los videos UGC de 10–15s funcionan mejor para anuncios en Meta y TikTok Ads.',
+      '💡 Combiná el fondo del avatar con el color de marca del producto para mayor coherencia visual.',
+      '📸 Subí una imagen de referencia del producto para que el avatar lo sostenga de forma realista.',
+      '🔥 Wan 3.0 Realism Pro genera expresiones faciales más detalladas — perfecto para testimoniales.',
+    ],
+    images: [
+      '🖼️ Usá prompts descriptivos: "high fashion editorial, soft studio lighting, neutral background".',
+      '🎨 Formato cuadrado 1:1 para feed de Instagram, 9:16 para Stories y TikTok.',
+      '✏️ Podés generar múltiples variaciones cambiando pequeños detalles del prompt.',
+      '💎 Agregar "photorealistic, 8K, sharp details" al final del prompt mejora la nitidez.',
+      '🌈 Flux Pro genera imágenes de alta resolución ideales para campañas de moda y belleza.',
+    ],
+    voice: [
+      '🎙️ ElevenLabs genera voces ultra-realistas — perfecto para combinar con tus videos UGC.',
+      '🔊 Ajustá la velocidad del habla en el slider para que coincida con el ritmo del video.',
+      '🌍 Tenés voces en español, inglés y portugués para llegar a más mercados.',
+      '🎵 Para voiceovers de Reels, usá un tono más energético — seleccioná "Energetic" como estilo.',
+      '📢 Los textos cortos (15–30 palabras) funcionan mejor para anuncios en redes sociales.',
+    ],
+  };
+
+  const ONBOARDING = [
+    '👋 ¡Hola! Soy Rocket, tu asistente de IA. Te voy a guiar.',
+    '🔑 Primero, hacé clic en "⚙ API Keys" arriba para ingresar tu clave de Siray AI.',
+    '📸 Luego subí una foto del avatar en la zona de upload.',
+    '✍️ Escribí un prompt describiendo el movimiento que querés generar.',
+    '🚀 ¡Hacé clic en "Generar" y listo! Te aviso cuando esté listo.',
+  ];
+
+  let currentTab = 'reels';
+  let tipIndex = 0;
+  let onboardStep = 0;
+  let isOnboarding = false;
+  let visible = false;
+
+  const bubble = document.getElementById('rocket-bubble');
+  const text = document.getElementById('rb-text');
+  const label = document.getElementById('rb-label');
+  const nextBtn = document.getElementById('rb-next');
+
+  function show(msg, labelText, showNext) {
+    label.textContent = labelText || '💡 Tip';
+    text.textContent = msg;
+    nextBtn.style.display = showNext ? '' : 'none';
+    bubble.classList.add('show');
+    visible = true;
+  }
+
+  function dismiss() {
+    bubble.classList.remove('show');
+    visible = false;
+    isOnboarding = false;
+  }
+
+  function toggle() {
+    if (visible) {
+      dismiss();
+    } else {
+      showTabTip(currentTab);
+    }
+  }
+
+  function showTabTip(tab) {
+    currentTab = tab;
+    const tips = TIPS[tab] || TIPS.reels;
+    tipIndex = tipIndex % tips.length;
+    show(tips[tipIndex], '💡 Tip para ' + tabName(tab), tips.length > 1);
+  }
+
+  function nextTip() {
+    if (isOnboarding) {
+      onboardStep++;
+      if (onboardStep < ONBOARDING.length) {
+        show(ONBOARDING[onboardStep], '🚀 Guía de inicio · ' + (onboardStep + 1) + '/' + ONBOARDING.length, true);
+        nextBtn.textContent = onboardStep < ONBOARDING.length - 1 ? 'Siguiente →' : '¡Empezar! 🎉';
+      } else {
+        isOnboarding = false;
+        try { localStorage.setItem('rocket_onboarded', '1'); } catch {}
+        dismiss();
+        setTimeout(() => showTabTip(currentTab), 800);
+      }
+    } else {
+      const tips = TIPS[currentTab] || TIPS.reels;
+      tipIndex = (tipIndex + 1) % tips.length;
+      show(tips[tipIndex], '💡 Tip para ' + tabName(currentTab), tips.length > 1);
+    }
+  }
+
+  function onTabSwitch(tab) {
+    currentTab = tab;
+    tipIndex = 0;
+    if (visible && !isOnboarding) {
+      showTabTip(tab);
+    }
+  }
+
+  function celebrate() {
+    const avatar = document.getElementById('rocket-avatar');
+    avatar.classList.remove('rocket-celebrate');
+    void avatar.offsetHeight;
+    avatar.classList.add('rocket-celebrate');
+    const sparkles = document.createElement('span');
+    sparkles.className = 'celebrate-sparkles';
+    sparkles.textContent = '🎉✨';
+    avatar.style.position = 'relative';
+    avatar.appendChild(sparkles);
+    setTimeout(() => { try { avatar.removeChild(sparkles); } catch {} }, 900);
+    show('🎉 ¡Video generado con éxito! Descargalo o escalalo con RunningHub.', '🎉 ¡Listo!', false);
+    avatar.addEventListener('animationend', () => avatar.classList.remove('rocket-celebrate'), { once: true });
+  }
+
+  function tabName(tab) {
+    return { reels: 'Reels', ugc: 'UGC', images: 'Imágenes', voice: 'Voz' }[tab] || tab;
+  }
+
+  function boot() {
+    let onboarded = false;
+    try { onboarded = !!localStorage.getItem('rocket_onboarded'); } catch {}
+    if (!onboarded) {
+      isOnboarding = true;
+      onboardStep = 0;
+      nextBtn.textContent = 'Siguiente →';
+      setTimeout(() => show(ONBOARDING[0], '🚀 Guía de inicio · 1/' + ONBOARDING.length, true), 1200);
+    } else {
+      setTimeout(() => showTabTip('reels'), 1800);
+    }
+  }
+
+  return { show, dismiss, toggle, nextTip, onTabSwitch, celebrate, boot };
+})();
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+init();
+RocketMascot.boot();
+</script>
