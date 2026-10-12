@@ -1549,15 +1549,24 @@ async function showSirayStatus(k) {
     }
   } catch {}
 }
-function showRhStatus(k, wf) {
+async function showRhStatus(k, wf) {
   const m = k.slice(0,6) + '...' + k.slice(-4);
   const wfLabel = wf ? ` · Workflow: <strong>${wf.slice(0,12)}${wf.length>12?'…':''}</strong>` : '';
-  document.getElementById('rh-status').innerHTML = `<span class="ok">✓ RunningHub OK: ${m}</span>${wfLabel}`;
+  document.getElementById('rh-status').innerHTML = `<span class="ok">✓ RunningHub OK: ${m}</span>${wfLabel} · Saldo: <span class="bal">...</span>`;
   // show upscale buttons on video outputs
   ['reels','ugc'].forEach(tab => {
     const btn = document.getElementById('rh-btn-' + tab);
     if (btn) btn.style.display = '';
   });
+  try {
+    const fd = new FormData(); fd.append('api_key', k);
+    const r = await fetch('/api/rh-balance', { method:'POST', body: fd });
+    if (r.ok) {
+      const d = await r.json();
+      const bal = d.balance >= 0 ? '$' + d.balance.toFixed(3) : '(ver en runninghub.ai)';
+      document.getElementById('rh-status').innerHTML = `<span class="ok">✓ RunningHub OK: ${m}</span>${wfLabel} · Saldo: <span class="bal">${bal}</span>`;
+    }
+  } catch {}
 }
 function showApiModal() { document.getElementById('api-card').scrollIntoView({ behavior:'smooth' }); }
 

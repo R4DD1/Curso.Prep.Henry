@@ -263,7 +263,31 @@ async def siray_balance(api_key: str) -> float:
         if resp.status_code != 200:
             return -1.0
         data = resp.json()
-        return data.get("balance", 0.0)
+        # Try multiple possible field paths
+        bal = (
+            data.get("balance")
+            or (data.get("data") or {}).get("balance")
+            or data.get("credits")
+            or data.get("available_balance")
+            or data.get("available")
+        )
+        return float(bal) if bal is not None else 0.0
+
+
+async def rh_balance(api_key: str) -> float:
+    async with httpx.AsyncClient(timeout=10) as client:
+        resp = await client.post(
+            f"{RH_BASE}/task/openapi/user/info",
+            headers={"apikey": api_key},
+        )
+        if resp.status_code != 200:
+            return -1.0
+        data = resp.json()
+        if data.get("code") != 0:
+            return -1.0
+        info = data.get("data") or {}
+        bal = info.get("accountBalance") or info.get("balance") or info.get("credits") or info.get("coin")
+        return float(bal) if bal is not None else -1.0
 
 
 # ─── Historial local ────────────────────────────────────────────────────────
@@ -301,6 +325,12 @@ async def get_models():
 @app.post("/api/balance")
 async def check_balance(api_key: str = Form(...)):
     balance = await siray_balance(api_key)
+    return {"balance": balance}
+
+
+@app.post("/api/rh-balance")
+async def check_rh_balance(api_key: str = Form(...)):
+    balance = await rh_balance(api_key)
     return {"balance": balance}
 
 
