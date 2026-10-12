@@ -32,7 +32,7 @@ if not HISTORY_FILE.exists():
 
 MODELS = {
     # ── Wan 3.0 ──────────────────────────────────────────────────────────────
-    "wan3-i2v": {
+    "wan3": {
         "id": "alibaba/wan-3.0-i2v",
         "name": "Wan 3.0",
         "badge": "RECOMENDADO",
@@ -42,7 +42,7 @@ MODELS = {
         "resolution": ["480p", "720p"],
         "needs_image": True,
     },
-    "wan3-i2v-spicy": {
+    "wan3-spicy": {
         "id": "alibaba/wan-3.0-i2v-spicy",
         "name": "Wan 3.0 Spicy",
         "badge": "SIN CENSURA",
@@ -52,7 +52,7 @@ MODELS = {
         "resolution": ["480p", "720p", "1080p"],
         "needs_image": True,
     },
-    "wan3-ref2v": {
+    "wan3-ref": {
         "id": "alibaba/wan-3.0-ref2v",
         "name": "Wan 3.0 Ref2V",
         "badge": "VIDEO REF",
@@ -64,7 +64,7 @@ MODELS = {
         "needs_ref_video": True,
     },
     # ── Kling ────────────────────────────────────────────────────────────────
-    "kling-i2v": {
+    "kling": {
         "id": "kling/kling-v2-0-master-i2v",
         "name": "Kling Motion Control",
         "badge": "",
@@ -74,7 +74,7 @@ MODELS = {
         "resolution": ["720p"],
         "needs_image": True,
     },
-    "kling-i2v-spicy": {
+    "kling-spicy": {
         "id": "kling/kling-v2-0-master-i2v-spicy",
         "name": "Kling Master (sin censura)",
         "badge": "SIN CENSURA",
@@ -116,7 +116,7 @@ MODELS = {
         "needs_image": True,
     },
     # ── Seedance ─────────────────────────────────────────────────────────────
-    "seedance-i2v": {
+    "seedance": {
         "id": "bytedance/seedance-1-0-lite-i2v-250528",
         "name": "Seedance 1.0",
         "badge": "",
