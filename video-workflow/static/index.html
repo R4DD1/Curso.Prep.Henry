@@ -439,6 +439,104 @@ textarea.prompt:focus { border-color: var(--accent); }
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* ── Rocket Mascot ── */
+#rocket-mascot {
+  position: fixed;
+  bottom: 24px;
+  right: 20px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  pointer-events: none;
+}
+#rocket-mascot.visible { pointer-events: auto; }
+.rocket-bubble {
+  background: rgba(20, 8, 40, 0.96);
+  border: 1px solid var(--purple);
+  border-radius: 14px 14px 4px 14px;
+  padding: .75rem 1rem;
+  max-width: 240px;
+  font-size: .8rem;
+  line-height: 1.5;
+  color: var(--text);
+  box-shadow: 0 4px 24px rgba(123,63,203,.35), 0 0 0 1px rgba(123,63,203,.12);
+  position: relative;
+  opacity: 0;
+  transform: translateY(10px) scale(.96);
+  transition: opacity .25s ease, transform .25s ease;
+}
+.rocket-bubble.show { opacity: 1; transform: translateY(0) scale(1); }
+.rocket-bubble .rb-close {
+  position: absolute;
+  top: 5px; right: 8px;
+  font-size: .7rem;
+  color: var(--muted);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  line-height: 1;
+  font-family: inherit;
+}
+.rocket-bubble .rb-close:hover { color: var(--text2); }
+.rocket-bubble .rb-text { padding-right: 12px; }
+.rocket-bubble .rb-tip-label {
+  font-size: .62rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: .3rem;
+}
+.rocket-bubble .rb-next {
+  margin-top: .5rem;
+  font-size: .7rem;
+  color: var(--purple);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  text-decoration: underline;
+}
+.rocket-bubble .rb-next:hover { color: var(--accent); }
+.rocket-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 2px solid var(--purple);
+  background: rgba(20,8,40,.9);
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: 0 0 20px rgba(123,63,203,.4);
+  transition: transform .18s ease, box-shadow .18s ease;
+  flex-shrink: 0;
+}
+.rocket-avatar:hover { transform: scale(1.08); box-shadow: 0 0 28px rgba(240,200,0,.35); }
+.rocket-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.rocket-celebrate {
+  animation: rocketBounce .5s ease 3;
+}
+@keyframes rocketBounce {
+  0%,100% { transform: scale(1); }
+  40% { transform: scale(1.18) rotate(-6deg); }
+  70% { transform: scale(1.1) rotate(4deg); }
+}
+.celebrate-sparkles {
+  position: absolute;
+  top: -8px; left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.4rem;
+  animation: sparkleUp .8s ease forwards;
+  pointer-events: none;
+}
+@keyframes sparkleUp {
+  0% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-28px); }
+}
 </style>
 
 <!-- ── Header ── -->
@@ -455,6 +553,19 @@ textarea.prompt:focus { border-color: var(--accent); }
     <button class="btn-ghost" onclick="showApiModal()">⚙ API Keys</button>
   </div>
 </header>
+
+<!-- ── Rocket Mascot ── -->
+<div id="rocket-mascot" class="visible">
+  <div class="rocket-bubble" id="rocket-bubble">
+    <div class="rb-tip-label" id="rb-label">💡 Tip</div>
+    <div class="rb-text" id="rb-text"></div>
+    <button class="rb-next" id="rb-next" onclick="RocketMascot.nextTip()">Otro tip →</button>
+    <button class="rb-close" id="rb-close" onclick="RocketMascot.dismiss()">✕</button>
+  </div>
+  <div class="rocket-avatar" id="rocket-avatar" onclick="RocketMascot.toggle()">
+    <img src="/static/rocket-mascot.png" alt="Rocket" />
+  </div>
+</div>
 
 <!-- ── Category nav ── -->
 <nav class="cat-nav">
@@ -942,6 +1053,7 @@ function switchTab(tab, btn) {
   btn.classList.add('active');
   currentTab = tab;
   renderModels(tab);
+  if (typeof RocketMascot !== 'undefined') RocketMascot.onTabSwitch(tab);
 }
 
 // ── Models ────────────────────────────────────────────────────────────────────
@@ -1175,6 +1287,7 @@ async function mockGenerate(tab) {
     if (vid) { vid.src = videoUrl; vid.load(); }
 
     addHistory(tab, videoUrl);
+    if (typeof RocketMascot !== 'undefined') RocketMascot.celebrate();
 
     // show RH upscale button if key is set
     try {
@@ -1453,6 +1566,150 @@ function resetOutput(tab) {
   if (o) o.style.display = 'none';
 }
 
+// ── Rocket Mascot ─────────────────────────────────────────────────────────────
+const RocketMascot = (() => {
+  const TIPS = {
+    reels: [
+      '🎯 Usá una foto clara del avatar con buena iluminación frontal para mejores resultados.',
+      '💃 Incluí en el prompt palabras como "dancing confidently" o "walking on runway" para movimientos expresivos.',
+      '📱 Wan 3.0 genera movimientos naturales de cámara — ideal para TikTok e Instagram Reels.',
+      '✨ Activá el upscale con RunningHub para llevar tu reel a calidad premium antes de publicar.',
+      '🎬 El modelo Wan 3.0 Uncensored permite ropa ajustada y poses más atrevidas para contenido de moda.',
+    ],
+    ugc: [
+      '🛍️ Para UGC, mostrá el producto en el prompt: "holding a bottle of skincare, smiling at camera".',
+      '🎤 Los videos UGC de 10–15s funcionan mejor para anuncios en Meta y TikTok Ads.',
+      '💡 Combiná el fondo del avatar con el color de marca del producto para mayor coherencia visual.',
+      '📸 Subí una imagen de referencia del producto para que el avatar lo sostenga de forma realista.',
+      '🔥 Wan 3.0 Realism Pro genera expresiones faciales más detalladas — perfecto para testimoniales.',
+    ],
+    images: [
+      '🖼️ Usá prompts descriptivos: "high fashion editorial, soft studio lighting, neutral background".',
+      '🎨 Formato cuadrado 1:1 para feed de Instagram, 9:16 para Stories y TikTok.',
+      '✏️ Podés generar múltiples variaciones cambiando pequeños detalles del prompt.',
+      '💎 Agregar "photorealistic, 8K, sharp details" al final del prompt mejora la nitidez.',
+      '🌈 Flux Pro genera imágenes de alta resolución ideales para campañas de moda y belleza.',
+    ],
+    voice: [
+      '🎙️ ElevenLabs genera voces ultra-realistas — perfecto para combinar con tus videos UGC.',
+      '🔊 Ajustá la velocidad del habla en el slider para que coincida con el ritmo del video.',
+      '🌍 Tenés voces en español, inglés y portugués para llegar a más mercados.',
+      '🎵 Para voiceovers de Reels, usá un tono más energético — seleccioná "Energetic" como estilo.',
+      '📢 Los textos cortos (15–30 palabras) funcionan mejor para anuncios en redes sociales.',
+    ],
+  };
+
+  const ONBOARDING = [
+    '👋 ¡Hola! Soy Rocket, tu asistente de IA. Te voy a guiar.',
+    '🔑 Primero, hacé clic en "⚙ API Keys" arriba para ingresar tu clave de Siray AI.',
+    '📸 Luego subí una foto del avatar en la zona de upload.',
+    '✍️ Escribí un prompt describiendo el movimiento que querés generar.',
+    '🚀 ¡Hacé clic en "Generar" y listo! Te aviso cuando esté listo.',
+  ];
+
+  let currentTab = 'reels';
+  let tipIndex = 0;
+  let onboardStep = 0;
+  let isOnboarding = false;
+  let visible = false;
+
+  const bubble = document.getElementById('rocket-bubble');
+  const text = document.getElementById('rb-text');
+  const label = document.getElementById('rb-label');
+  const nextBtn = document.getElementById('rb-next');
+
+  function show(msg, labelText, showNext) {
+    label.textContent = labelText || '💡 Tip';
+    text.textContent = msg;
+    nextBtn.style.display = showNext ? '' : 'none';
+    bubble.classList.add('show');
+    visible = true;
+  }
+
+  function dismiss() {
+    bubble.classList.remove('show');
+    visible = false;
+    isOnboarding = false;
+  }
+
+  function toggle() {
+    if (visible) {
+      dismiss();
+    } else {
+      showTabTip(currentTab);
+    }
+  }
+
+  function showTabTip(tab) {
+    currentTab = tab;
+    const tips = TIPS[tab] || TIPS.reels;
+    tipIndex = tipIndex % tips.length;
+    show(tips[tipIndex], '💡 Tip para ' + tabName(tab), tips.length > 1);
+  }
+
+  function nextTip() {
+    if (isOnboarding) {
+      onboardStep++;
+      if (onboardStep < ONBOARDING.length) {
+        show(ONBOARDING[onboardStep], '🚀 Guía de inicio · ' + (onboardStep + 1) + '/' + ONBOARDING.length, true);
+        nextBtn.textContent = onboardStep < ONBOARDING.length - 1 ? 'Siguiente →' : '¡Empezar! 🎉';
+      } else {
+        isOnboarding = false;
+        try { localStorage.setItem('rocket_onboarded', '1'); } catch {}
+        dismiss();
+        setTimeout(() => showTabTip(currentTab), 800);
+      }
+    } else {
+      const tips = TIPS[currentTab] || TIPS.reels;
+      tipIndex = (tipIndex + 1) % tips.length;
+      show(tips[tipIndex], '💡 Tip para ' + tabName(currentTab), tips.length > 1);
+    }
+  }
+
+  function onTabSwitch(tab) {
+    currentTab = tab;
+    tipIndex = 0;
+    if (visible && !isOnboarding) {
+      showTabTip(tab);
+    }
+  }
+
+  function celebrate() {
+    const avatar = document.getElementById('rocket-avatar');
+    avatar.classList.remove('rocket-celebrate');
+    void avatar.offsetHeight;
+    avatar.classList.add('rocket-celebrate');
+    const sparkles = document.createElement('span');
+    sparkles.className = 'celebrate-sparkles';
+    sparkles.textContent = '🎉✨';
+    avatar.style.position = 'relative';
+    avatar.appendChild(sparkles);
+    setTimeout(() => { try { avatar.removeChild(sparkles); } catch {} }, 900);
+    show('🎉 ¡Video generado con éxito! Descargalo o escalalo con RunningHub.', '🎉 ¡Listo!', false);
+    avatar.addEventListener('animationend', () => avatar.classList.remove('rocket-celebrate'), { once: true });
+  }
+
+  function tabName(tab) {
+    return { reels: 'Reels', ugc: 'UGC', images: 'Imágenes', voice: 'Voz' }[tab] || tab;
+  }
+
+  function boot() {
+    let onboarded = false;
+    try { onboarded = !!localStorage.getItem('rocket_onboarded'); } catch {}
+    if (!onboarded) {
+      isOnboarding = true;
+      onboardStep = 0;
+      nextBtn.textContent = 'Siguiente →';
+      setTimeout(() => show(ONBOARDING[0], '🚀 Guía de inicio · 1/' + ONBOARDING.length, true), 1200);
+    } else {
+      setTimeout(() => showTabTip('reels'), 1800);
+    }
+  }
+
+  return { show, dismiss, toggle, nextTip, onTabSwitch, celebrate, boot };
+})();
+
 // ── Boot ──────────────────────────────────────────────────────────────────────
 init();
+RocketMascot.boot();
 </script>
