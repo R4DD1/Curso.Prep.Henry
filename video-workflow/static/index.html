@@ -1,662 +1,1334 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Video Workflow · Generación IA</title>
-  <style>
-    /* ── Reset & base ── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg: #080610;
-      --bg2: #10091a;
-      --bg3: #1a1228;
-      --border: #2d1f45;
-      --pink: #f0c800;
-      --pink-glow: rgba(240,200,0,0.13);
-      --purple: #7b3fcb;
-      --green: #22c55e;
-      --amber: #f59e0b;
-      --red: #ef4444;
-      --text: #f2eed8;
-      --muted: #8870a8;
-      --radius: 12px;
-    }
-    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+<title>Video Workflow · Generación IA</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<style>
+:root {
+  --bg: #000000;
+  --bg2: rgba(123,63,203,0.12);
+  --bg3: rgba(123,63,203,0.18);
+  --bg4: rgba(123,63,203,0.24);
+  --border: rgba(123,63,203,0.35);
+  --border2: rgba(123,63,203,0.55);
+  --accent: #f0c800;
+  --accent-glow: rgba(240,200,0,0.14);
+  --accent-soft: rgba(240,200,0,0.22);
+  --purple: #7b3fcb;
+  --purple-glow: rgba(123,63,203,0.18);
+  --purple-soft: rgba(123,63,203,0.25);
+  --green: #22c55e;
+  --amber: #f59e0b;
+  --red: #ef4444;
+  --text: #f2eed8;
+  --text2: #9880c0;
+  --muted: #5a4d70;
+  --radius: 12px;
+  color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Inter', -apple-system, sans-serif; min-height: 100vh; }
 
-    /* ── Layout ── */
-    header { background: var(--bg2); border-bottom: 2px solid transparent; border-image: linear-gradient(90deg, var(--purple, #7b3fcb), var(--pink)) 1; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
-    header h1 { font-size: 1.05rem; font-weight: 700; letter-spacing: -0.3px; }
-    header h1 span { color: var(--pink); }
-    .header-actions { display: flex; gap: .6rem; }
-    .btn-sm { background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: .35rem .85rem; border-radius: 8px; font-size: .8rem; cursor: pointer; transition: background .15s; }
-    .btn-sm:hover { background: #2a2a2a; }
+/* ── Header ── */
+.header {
+  background: rgba(0,0,0,.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 1.5rem;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: env(safe-area-inset-top, 0);
+  z-index: 30;
+}
+.header::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, var(--purple), var(--accent), var(--purple));
+}
+.logo { display: flex; align-items: center; gap: .55rem; }
+.logo-mark {
+  width: 30px; height: 30px;
+  background: linear-gradient(135deg, var(--purple), var(--accent));
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .95rem;
+  box-shadow: 0 0 14px rgba(240,200,0,.3);
+}
+.logo-text { font-size: 1rem; font-weight: 800; letter-spacing: -.3px; }
+.logo-text span { color: var(--accent); }
+.header-right { display: flex; align-items: center; gap: .5rem; }
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  padding: .3rem .75rem;
+  border-radius: 7px;
+  font-size: .78rem;
+  cursor: pointer;
+  transition: border-color .15s, color .15s;
+  font-family: inherit;
+}
+.btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+.api-badge {
+  font-size: .72rem;
+  font-weight: 600;
+  padding: .25rem .7rem;
+  border-radius: 20px;
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+}
+.api-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
 
-    main { display: grid; grid-template-columns: 1fr 380px; gap: 1.5rem; max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
-    @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+/* ── Category tabs ── */
+.cat-nav {
+  display: flex;
+  gap: 0;
+  padding: 0 1.5rem;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.cat-nav::-webkit-scrollbar { display: none; }
+.cat-tab {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .8rem 1.1rem;
+  font-size: .82rem;
+  font-weight: 600;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color .15s, border-color .15s;
+  background: none;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  font-family: inherit;
+}
+.cat-tab:hover { color: var(--text2); }
+.cat-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.cat-tab .tab-icon { font-size: 1rem; }
+.cat-tab .tab-badge {
+  font-size: .55rem;
+  font-weight: 700;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  background: var(--purple);
+  color: #fff;
+  padding: .1rem .35rem;
+  border-radius: 3px;
+}
 
-    /* ── Card ── */
-    .card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; }
-    .card-label { font-size: .65rem; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--pink); margin-bottom: .5rem; }
-    .card-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem; }
+/* ── Layout ── */
+.workspace {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 1.25rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.25rem 1.5rem;
+}
+@media (max-width: 860px) { .workspace { grid-template-columns: 1fr; } }
 
-    /* ── API Key banner ── */
-    #api-banner { margin-bottom: 1.5rem; }
-    .api-row { display: flex; gap: .5rem; }
-    .api-row input { flex: 1; background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: .55rem .9rem; border-radius: 8px; font-size: .88rem; outline: none; }
-    .api-row input:focus { border-color: var(--pink); }
-    .btn-pink { background: var(--pink); border: none; color: #1a0d2e; padding: .55rem 1.2rem; border-radius: 8px; font-size: .88rem; font-weight: 700; cursor: pointer; transition: opacity .15s, box-shadow .15s; white-space: nowrap; }
-    .btn-pink:hover { opacity: .9; box-shadow: 0 0 18px rgba(240,200,0,.35); }
-    .btn-pink:disabled { opacity: .45; cursor: default; }
-    .api-status { margin-top: .55rem; font-size: .82rem; color: var(--muted); }
-    .api-status .ok { color: var(--green); }
-    .api-status .bal { color: var(--pink); font-weight: 600; }
+/* ── Card ── */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.2rem;
+  margin-bottom: 1rem;
+}
+.card:last-child { margin-bottom: 0; }
+.eyebrow { font-size: .6rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent); margin-bottom: .4rem; }
+.card-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 1rem; letter-spacing: -.2px; }
 
-    /* ── Upload zones ── */
-    .upload-grid { display: grid; grid-template-columns: 1fr 180px; gap: .75rem; margin-bottom: 1rem; }
-    .drop-zone { border: 2px dashed var(--border); border-radius: var(--radius); min-height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .5rem; cursor: pointer; transition: border-color .2s, background .2s; position: relative; overflow: hidden; }
-    .drop-zone:hover, .drop-zone.drag { border-color: var(--pink); background: var(--pink-glow); }
-    .drop-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-    .drop-zone .icon { font-size: 1.8rem; }
-    .drop-zone .label { font-size: .8rem; color: var(--muted); text-align: center; }
-    .drop-zone .sub { font-size: .7rem; color: #555; }
-    .drop-zone img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: calc(var(--radius) - 2px); }
+/* ── API Key ── */
+.api-row { display: flex; gap: .5rem; }
+.api-input {
+  flex: 1;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: .52rem .9rem;
+  border-radius: 8px;
+  font-size: .85rem;
+  outline: none;
+  font-family: inherit;
+}
+.api-input:focus { border-color: var(--accent); }
+.api-status { margin-top: .5rem; font-size: .78rem; color: var(--muted); }
+.api-status .ok { color: var(--green); }
+.api-status .bal { color: var(--accent); font-weight: 700; }
 
-    /* ── Prompt ── */
-    .prompt-wrap { margin-bottom: 1rem; }
-    .prompt-wrap label { font-size: .8rem; color: var(--muted); display: block; margin-bottom: .35rem; }
-    .prompt-wrap textarea { width: 100%; background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: .65rem .9rem; border-radius: 8px; font-size: .88rem; resize: vertical; min-height: 70px; outline: none; font-family: inherit; }
-    .prompt-wrap textarea:focus { border-color: var(--pink); }
+/* ── Buttons ── */
+.btn-primary {
+  background: var(--accent);
+  border: none;
+  color: #1a0d2e;
+  padding: .55rem 1.2rem;
+  border-radius: 8px;
+  font-size: .85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity .15s, box-shadow .15s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.btn-primary:hover { opacity: .9; box-shadow: 0 0 20px rgba(240,200,0,.35); }
+.btn-primary:disabled { opacity: .4; cursor: default; box-shadow: none; }
+.btn-primary.full { width: 100%; padding: .8rem; font-size: .95rem; border-radius: 10px; }
+.btn-secondary {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  padding: .52rem 1rem;
+  border-radius: 8px;
+  font-size: .82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color .15s;
+  font-family: inherit;
+}
+.btn-secondary:hover { border-color: var(--accent); color: var(--text); }
 
-    /* ── Duration & resolution ── */
-    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; margin-bottom: 1rem; }
-    .field label { font-size: .78rem; color: var(--muted); display: block; margin-bottom: .3rem; }
-    .field select, .field input[type=range] { width: 100%; }
-    .field select { background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: .5rem .75rem; border-radius: 8px; font-size: .88rem; outline: none; cursor: pointer; }
-    .field select:focus { border-color: var(--pink); }
-    .range-row { display: flex; align-items: center; gap: .6rem; }
-    .range-row input[type=range] { accent-color: var(--pink); flex: 1; }
-    .range-val { font-size: .85rem; font-weight: 600; color: var(--pink); min-width: 28px; text-align: right; }
+/* ── Upload zones ── */
+.upload-grid { display: grid; grid-template-columns: 1fr 160px; gap: .7rem; margin-bottom: .9rem; }
+.upload-grid.single { grid-template-columns: 1fr; }
+.drop-zone {
+  border: 2px dashed var(--border2);
+  border-radius: var(--radius);
+  min-height: 148px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  cursor: pointer;
+  transition: border-color .18s, background .18s;
+  position: relative;
+  overflow: hidden;
+}
+.drop-zone:hover { border-color: var(--accent); background: var(--accent-glow); }
+.drop-zone.has-file { border-color: var(--accent); border-style: solid; background: var(--accent-glow); }
+.drop-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.dz-icon { font-size: 1.8rem; }
+.dz-label { font-size: .78rem; color: var(--text2); text-align: center; line-height: 1.4; }
+.dz-sub { font-size: .68rem; color: var(--muted); }
 
-    /* ── Upscale toggle ── */
-    .toggle-row { display: flex; align-items: center; gap: .75rem; margin-bottom: 1rem; padding: .7rem 1rem; background: var(--bg3); border-radius: 8px; border: 1px solid var(--border); cursor: pointer; }
-    .toggle-row input[type=checkbox] { accent-color: var(--pink); width: 16px; height: 16px; cursor: pointer; }
-    .toggle-row .tl { flex: 1; }
-    .toggle-row .tl strong { font-size: .88rem; display: block; }
-    .toggle-row .tl span { font-size: .75rem; color: var(--muted); }
-    .toggle-row .price-tag { font-size: .78rem; color: var(--pink); font-weight: 600; }
+/* ── Form fields ── */
+.field-label { font-size: .76rem; color: var(--text2); display: block; margin-bottom: .3rem; }
+textarea.prompt {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: .6rem .85rem;
+  border-radius: 8px;
+  font-size: .85rem;
+  resize: vertical;
+  min-height: 70px;
+  outline: none;
+  font-family: inherit;
+  margin-bottom: .9rem;
+}
+textarea.prompt:focus { border-color: var(--accent); }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; margin-bottom: .9rem; }
+.field select, .field input[type=text] {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: .5rem .75rem;
+  border-radius: 8px;
+  font-size: .83rem;
+  outline: none;
+  font-family: inherit;
+}
+.field select:focus, .field input[type=text]:focus { border-color: var(--accent); }
+.range-row { display: flex; align-items: center; gap: .55rem; }
+.range-row input[type=range] { accent-color: var(--accent); flex: 1; cursor: pointer; }
+.range-val { font-size: .83rem; font-weight: 700; color: var(--accent); min-width: 28px; text-align: right; font-variant-numeric: tabular-nums; }
 
-    /* ── Cost estimate ── */
-    .cost-box { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: .75rem 1rem; margin-bottom: 1rem; }
-    .cost-row { display: flex; justify-content: space-between; font-size: .82rem; color: var(--muted); }
-    .cost-row + .cost-row { margin-top: .3rem; }
-    .cost-row.total { color: var(--text); font-weight: 700; margin-top: .5rem; padding-top: .5rem; border-top: 1px solid var(--border); font-size: .9rem; }
-    .cost-row.total span:last-child { color: var(--pink); }
+/* ── Toggle (upscale) ── */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  padding: .65rem .9rem;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  cursor: pointer;
+  margin-bottom: .9rem;
+  transition: border-color .15s;
+}
+.toggle-row:hover { border-color: var(--accent); }
+.toggle-row input[type=checkbox] { accent-color: var(--accent); width: 15px; height: 15px; flex-shrink: 0; cursor: pointer; }
+.tgl-info { flex: 1; min-width: 0; }
+.tgl-info strong { font-size: .85rem; display: block; }
+.tgl-info span { font-size: .72rem; color: var(--text2); }
+.tgl-price { font-size: .76rem; color: var(--accent); font-weight: 700; flex-shrink: 0; }
 
-    /* ── Generate button ── */
-    #btn-generate { width: 100%; padding: .8rem; font-size: 1rem; border-radius: 10px; }
+/* ── Cost box ── */
+.cost-box {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: .7rem .9rem;
+  margin-bottom: .9rem;
+}
+.cost-row { display: flex; justify-content: space-between; font-size: .8rem; color: var(--text2); }
+.cost-row + .cost-row { margin-top: .28rem; }
+.cost-row.total {
+  color: var(--text);
+  font-weight: 700;
+  margin-top: .5rem;
+  padding-top: .5rem;
+  border-top: 1px solid var(--border);
+  font-size: .88rem;
+}
+.cost-row.total .cv { color: var(--accent); }
 
-    /* ── Right panel: model selector ── */
-    .model-list { display: flex; flex-direction: column; gap: .6rem; margin-bottom: 1rem; }
-    .model-card { border: 2px solid var(--border); border-radius: 10px; padding: .85rem 1rem; cursor: pointer; transition: border-color .15s, background .15s; }
-    .model-card:hover { border-color: #444; }
-    .model-card.selected { border-color: var(--pink); background: var(--pink-glow); }
-    .model-card-header { display: flex; align-items: center; gap: .5rem; margin-bottom: .25rem; }
-    .model-card-header strong { font-size: .9rem; }
-    .badge { font-size: .6rem; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; background: var(--pink); color: #1a0d2e; padding: .15rem .45rem; border-radius: 4px; }
-    .badge.purple { background: var(--purple, #7b3fcb); color: #fff; }
-    .badge.new { background: var(--pink); }
-    .max-dur { font-size: .7rem; color: var(--muted); margin-left: auto; }
-    .model-desc { font-size: .75rem; color: var(--muted); }
-    .model-price { font-size: .73rem; color: var(--pink); margin-top: .3rem; font-weight: 600; }
+/* ── Progress ── */
+.progress-wrap { margin-top: 1rem; }
+.progress-track { height: 5px; background: var(--bg4); border-radius: 3px; overflow: hidden; margin: .5rem 0; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--purple), var(--accent)); border-radius: 3px; width: 0%; transition: width .5s ease; }
+.progress-label { font-size: .76rem; color: var(--text2); display: flex; align-items: center; gap: .4rem; }
+.dot-pulse { color: var(--accent); animation: pulse 1.1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
-    /* ── Progress / status ── */
-    #progress-section { margin-top: 1.5rem; }
-    .progress-bar-wrap { height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; margin: .6rem 0; }
-    .progress-bar { height: 100%; background: linear-gradient(90deg, var(--purple, #7b3fcb), var(--pink)); border-radius: 3px; width: 0%; transition: width .4s; }
-    .status-text { font-size: .82rem; color: var(--muted); }
-    .status-text .pulse { color: var(--pink); animation: pulse 1.2s infinite; }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+/* ── Output ── */
+.output-area { margin-top: 1rem; display: none; }
+.output-area video, .output-area img { width: 100%; border-radius: var(--radius); background: var(--bg3); }
+.output-actions { display: flex; gap: .5rem; margin-top: .65rem; flex-wrap: wrap; }
 
-    /* ── Video output ── */
-    #video-output { margin-top: 1rem; display: none; }
-    #video-output video { width: 100%; border-radius: var(--radius); }
-    .output-actions { display: flex; gap: .5rem; margin-top: .6rem; }
+/* ── Info banner ── */
+.info-banner {
+  background: var(--purple-glow);
+  border: 1px solid var(--purple-soft);
+  border-radius: 9px;
+  padding: .65rem .9rem;
+  font-size: .76rem;
+  color: var(--text2);
+  line-height: 1.6;
+  margin-bottom: .9rem;
+}
+.info-banner strong { color: var(--text); }
+.info-banner .hi { color: var(--accent); font-weight: 700; }
 
-    /* ── History ── */
-    #history-section { margin-top: 1.5rem; }
-    .history-list { display: flex; flex-direction: column; gap: .6rem; max-height: 340px; overflow-y: auto; }
-    .history-item { display: flex; gap: .75rem; align-items: center; background: var(--bg3); border-radius: 8px; padding: .65rem .85rem; font-size: .8rem; }
-    .hist-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    .hist-dot.completed { background: var(--green); }
-    .hist-dot.processing { background: var(--amber); }
-    .hist-dot.failed { background: var(--red); }
-    .hist-info { flex: 1; min-width: 0; }
-    .hist-model { font-weight: 600; }
-    .hist-prompt { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .hist-cost { color: var(--pink); font-weight: 600; flex-shrink: 0; }
-    .hist-link { color: var(--pink); text-decoration: none; font-size: .75rem; }
-    .hist-link:hover { text-decoration: underline; }
+/* ── Warning banner ── */
+.warn-banner {
+  background: rgba(245,158,11,.08);
+  border: 1px solid rgba(245,158,11,.25);
+  border-radius: 8px;
+  padding: .55rem .8rem;
+  font-size: .74rem;
+  color: var(--amber);
+  margin-bottom: .9rem;
+}
 
-    /* ── Modal ── */
-    #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 100; align-items: center; justify-content: center; }
-    #modal.open { display: flex; }
-    .modal-box { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; width: 92%; max-width: 420px; }
-    .modal-box h3 { margin-bottom: 1rem; }
-    .modal-box p { font-size: .88rem; color: var(--muted); margin-bottom: 1.2rem; }
-    .modal-actions { display: flex; justify-content: flex-end; gap: .5rem; }
-  </style>
-</head>
-<body>
+/* ── Right panel: Model selector ── */
+.model-list { display: flex; flex-direction: column; gap: .55rem; margin-bottom: .9rem; }
+.model-card {
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: .8rem .95rem;
+  cursor: pointer;
+  transition: border-color .15s, background .15s, box-shadow .15s;
+}
+.model-card:hover { border-color: var(--border2); background: var(--bg3); }
+.model-card.sel {
+  border-color: var(--accent);
+  background: var(--accent-glow);
+  box-shadow: 0 0 0 1px var(--accent), inset 0 0 24px rgba(123,63,203,.07);
+}
+.mc-head { display: flex; align-items: center; gap: .4rem; margin-bottom: .2rem; }
+.mc-head strong { font-size: .87rem; }
+.mc-badge {
+  font-size: .56rem;
+  font-weight: 700;
+  letter-spacing: .6px;
+  text-transform: uppercase;
+  background: var(--accent);
+  color: #1a0d2e;
+  padding: .12rem .4rem;
+  border-radius: 3px;
+}
+.mc-badge.pb { background: var(--purple); color: #fff; }
+.mc-badge.gb { background: #1a7a3a; color: #a8ffca; }
+.mc-badge.red { background: rgba(180,30,30,0.85); color: #ffc0c0; border: 1px solid rgba(255,80,80,0.4); }
+.mc-dur { font-size: .67rem; color: var(--muted); margin-left: auto; font-variant-numeric: tabular-nums; }
+.mc-desc { font-size: .72rem; color: var(--text2); margin-bottom: .2rem; }
+.mc-price { font-size: .7rem; color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums; }
 
-<header>
-  <h1>Video <span>Workflow</span> · Generación IA</h1>
-  <div class="header-actions">
-    <button class="btn-sm" onclick="openHistory()">Historial</button>
-    <button class="btn-sm" onclick="openModal('help')">?</button>
+/* ── Sidebar sections ── */
+.sidebar-section { margin-bottom: .9rem; }
+.sidebar-section:last-child { margin-bottom: 0; }
+.sidebar-divider { border: none; border-top: 1px solid var(--border); margin: .9rem 0; }
+
+/* ── Voice panel ── */
+.voice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin-bottom: .9rem; }
+.voice-chip {
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: .55rem .7rem;
+  cursor: pointer;
+  font-size: .78rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  transition: border-color .15s, background .15s;
+}
+.voice-chip:hover { border-color: var(--border2); }
+.voice-chip.sel { border-color: var(--accent); background: var(--accent-glow); color: var(--accent); }
+.voice-chip .vc-icon { font-size: 1rem; }
+.voice-chip .vc-meta { font-size: .65rem; color: var(--muted); font-weight: 400; display: block; }
+
+/* ── Image size chips ── */
+.size-chips { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: .9rem; }
+.size-chip {
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  padding: .3rem .65rem;
+  font-size: .75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.size-chip:hover { border-color: var(--border2); }
+.size-chip.sel { border-color: var(--accent); background: var(--accent-glow); color: var(--accent); }
+
+/* ── History ── */
+.history-list { display: flex; flex-direction: column; gap: .5rem; max-height: 280px; overflow-y: auto; }
+.hist-item {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  background: var(--bg3);
+  border-radius: 8px;
+  padding: .6rem .8rem;
+  font-size: .78rem;
+}
+.hist-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.hist-dot.ok { background: var(--green); }
+.hist-dot.proc { background: var(--amber); }
+.hist-dot.err { background: var(--red); }
+.hist-info { flex: 1; min-width: 0; }
+.hist-cat { font-size: .62rem; color: var(--purple); font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+.hist-prompt { color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hist-cost { color: var(--accent); font-weight: 700; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+
+/* ── Tab content visibility ── */
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+/* ── ElevenLabs key row ── */
+.el-key-row { display: flex; gap: .5rem; align-items: center; margin-bottom: .9rem; }
+.el-key-row .api-input { font-size: .8rem; }
+.el-status { font-size: .74rem; color: var(--muted); }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+</style>
+
+<!-- ── Header ── -->
+<header class="header">
+  <div class="logo">
+    <div class="logo-mark">🎬</div>
+    <div class="logo-text">Video <span>Workflow</span></div>
+  </div>
+  <div class="header-right">
+    <div class="api-badge" id="key-badge">
+      <span class="dot" style="background:var(--muted)"></span>
+      Sin clave
+    </div>
+    <button class="btn-ghost" onclick="showApiModal()">⚙ API Keys</button>
   </div>
 </header>
 
-<main>
-  <!-- ── LEFT COLUMN ── -->
+<!-- ── Category nav ── -->
+<nav class="cat-nav">
+  <button class="cat-tab active" data-tab="reels" onclick="switchTab('reels',this)">
+    <span class="tab-icon">📱</span> Reels & Social
+  </button>
+  <button class="cat-tab" data-tab="ugc" onclick="switchTab('ugc',this)">
+    <span class="tab-icon">🎥</span> UGC Videos
+  </button>
+  <button class="cat-tab" data-tab="images" onclick="switchTab('images',this)">
+    <span class="tab-icon">🖼️</span> Imágenes IA
+  </button>
+  <button class="cat-tab" data-tab="voice" onclick="switchTab('voice',this)">
+    <span class="tab-icon">🎙️</span> Voz + Video
+    <span class="tab-badge">ElevenLabs</span>
+  </button>
+</nav>
+
+<!-- ── Workspace ── -->
+<div class="workspace">
+
+  <!-- ═══ LEFT COLUMN ═══ -->
   <div>
 
-    <!-- API Key -->
-    <div class="card" id="api-banner">
-      <div class="card-label">Paso previo</div>
-      <div class="card-title">Conectá tu clave API de Siray</div>
-      <div class="api-row">
-        <input type="password" id="api-key-input" placeholder="sk_..." autocomplete="off" />
-        <button class="btn-pink" onclick="saveApiKey()">Guardar clave</button>
-      </div>
-      <div class="api-status" id="api-status">
-        Sin clave guardada — <a href="https://console.siray.ai" target="_blank" style="color:var(--pink)">Obtené una en siray.ai</a>
-      </div>
-    </div>
-
-    <!-- Inputs -->
-    <div class="card" style="margin-bottom:1.5rem">
-      <div class="card-label">Inputs</div>
-      <div class="card-title">Imagen del avatar + prompt</div>
-
-      <div class="upload-grid">
-        <div class="drop-zone" id="drop-video" onclick="document.getElementById('input-image').click()">
-          <input type="file" id="input-image" accept="image/*" onchange="handleImageUpload(this)" />
-          <span class="icon">🖼️</span>
-          <span class="label">Imagen del avatar</span>
-          <span class="sub">JPG, PNG, WEBP</span>
+    <!-- ─ TAB: REELS ─ -->
+    <div class="tab-pane active" id="tab-reels">
+      <div class="card">
+        <div class="eyebrow">Reels & Social</div>
+        <div class="card-title">Videos verticales 9:16 para redes</div>
+        <div class="info-banner">
+          <strong>Formato:</strong> vertical 9:16 · <span class="hi">Ideal para TikTok, Instagram Reels, YouTube Shorts</span><br>
+          Wan 3.0 genera movimientos naturales de cámara, bailes y expresiones faciales.
         </div>
-        <div class="drop-zone" id="drop-ref-video" onclick="document.getElementById('ref-video').click()" style="min-height:120px;display:none">
-          <input type="file" id="ref-video" accept="video/*" onchange="handleRefVideoUpload(this)" />
-          <span class="icon">🎬</span>
-          <span class="label" style="font-size:.72rem">Video de<br>referencia</span>
-          <span class="sub">MP4, MOV</span>
-        </div>
-        <div class="drop-zone" id="drop-model-img" onclick="document.getElementById('ref-image').click()" style="min-height:120px">
-          <input type="file" id="ref-image" accept="image/*" onchange="handleRefImage(this)" />
-          <span class="icon">👤</span>
-          <span class="label" style="font-size:.72rem">Ref. adicional<br>(opcional)</span>
-        </div>
-      </div>
-      <div id="ref2v-billing-note" style="display:none;font-size:.75rem;color:var(--amber);background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);border-radius:8px;padding:.5rem .75rem;margin-bottom:.75rem">
-        ⚠️ <strong>Billing ref2v:</strong> se cobra duración del video de entrada + duración de salida (ej: 5s ref + 15s output = 20s facturados).
-      </div>
-
-      <div class="prompt-wrap">
-        <label>Descripción del movimiento / acción</label>
-        <textarea id="prompt" placeholder="Una mujer camina sonriente en un parque, movimientos naturales, luz del sol..."></textarea>
-      </div>
-
-      <div class="row2">
-        <div class="field">
-          <label>Duración: <span id="dur-label">10s</span></label>
-          <div class="range-row">
-            <input type="range" id="duration" min="5" max="15" value="10" step="1" oninput="updateDuration(this.value)" />
-            <span class="range-val" id="dur-val">10s</span>
+        <div class="upload-grid">
+          <div class="drop-zone">
+            <input type="file" accept="image/*" />
+            <span class="dz-icon">🖼️</span>
+            <span class="dz-label">Imagen del avatar</span>
+            <span class="dz-sub">JPG · PNG · WEBP</span>
+          </div>
+          <div class="drop-zone" id="reels-ref-img-zone" style="min-height:110px">
+            <input type="file" accept="image/*" />
+            <span class="dz-icon">🎭</span>
+            <span class="dz-label" style="font-size:.72rem">Ref. adicional<br><em style="color:var(--muted)">(opcional)</em></span>
+          </div>
+          <div class="drop-zone" id="reels-ref-video-zone" style="min-height:110px;display:none">
+            <input type="file" accept="video/*" />
+            <span class="dz-icon">🎬</span>
+            <span class="dz-label" style="font-size:.72rem">Video de<br>referencia</span>
+            <span class="dz-sub">MP4 · MOV</span>
           </div>
         </div>
-        <div class="field">
-          <label>Resolución de salida</label>
-          <select id="resolution" onchange="updateCost()">
-            <option value="480p">480p (más barato)</option>
-            <option value="720p">720p</option>
-          </select>
+        <div class="warn-banner" id="reels-ref2v-warn" style="display:none">
+          ⚠️ <strong>Ref2V billing:</strong> se cobra duración del video de entrada + salida (ej: 5s ref + 15s output = 20s facturados).
         </div>
-      </div>
-
-      <label class="toggle-row" for="upscale-check">
-        <input type="checkbox" id="upscale-check" onchange="updateCost()" />
-        <div class="tl">
-          <strong>✨ Escalar a 1080p (fal.ai ByteDance)</strong>
-          <span>+~$0.108 por 15s · calidad final mucho mejor</span>
+        <label class="field-label">Prompt del movimiento / acción</label>
+        <textarea class="prompt" placeholder="Una influencer baila una coreografía viral, sonriente, ropa urbana, fondo de ciudad de noche, movimientos fluidos y rítmicos..."></textarea>
+        <div class="row2">
+          <div class="field">
+            <label class="field-label">Duración <span id="reels-dur-disp" style="color:var(--accent);font-weight:700">10s</span></label>
+            <div class="range-row">
+              <input type="range" min="5" max="15" value="10" step="1" oninput="setDur('reels',this.value)" />
+              <span class="range-val" id="reels-dur-val">10s</span>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field-label">Resolución</label>
+            <select onchange="updateCost('reels')">
+              <option value="480p">480p (más barato)</option>
+              <option value="720p">720p</option>
+            </select>
+          </div>
         </div>
-        <span class="price-tag" id="upscale-price-tag">+$0.11</span>
-      </label>
-
-      <!-- Cost estimate -->
-      <div class="cost-box">
-        <div class="cost-row"><span>Generación (<span id="cost-model-name">Wan 3.0</span>)</span><span id="cost-gen">$0.40</span></div>
-        <div class="cost-row" id="cost-upscale-row" style="display:none"><span>Escalado 1080p</span><span id="cost-up">$0.11</span></div>
-        <div class="cost-row total"><span>Total estimado</span><span id="cost-total">$0.40</span></div>
-      </div>
-
-      <button class="btn-pink" id="btn-generate" onclick="generateVideo()">Crear video</button>
-
-      <!-- Progress -->
-      <div id="progress-section" style="display:none">
-        <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar"></div></div>
-        <div class="status-text"><span class="pulse">●</span> <span id="status-msg">Iniciando generación...</span></div>
-      </div>
-
-      <!-- Video output -->
-      <div id="video-output">
-        <video id="output-video" controls loop playsinline></video>
-        <div class="output-actions">
-          <a id="download-btn" class="btn-pink" style="text-decoration:none;padding:.5rem 1rem;font-size:.85rem" download>⬇ Descargar</a>
-          <button class="btn-sm" onclick="resetForm()">Nueva generación</button>
+        <label class="toggle-row" for="reels-upscale">
+          <input type="checkbox" id="reels-upscale" onchange="updateCost('reels')" />
+          <div class="tgl-info">
+            <strong>✨ Escalar a 1080p (fal.ai ByteDance)</strong>
+            <span>+$0.0072/s · calidad final premium</span>
+          </div>
+          <span class="tgl-price" id="reels-upscale-price">+$0.072</span>
+        </label>
+        <div class="cost-box">
+          <div class="cost-row"><span>Generación (<span id="reels-model-name">Wan 3.0</span>)</span><span class="cv" id="reels-cost-gen">$0.40</span></div>
+          <div class="cost-row" id="reels-upscale-row" style="display:none"><span>Escalado 1080p</span><span class="cv" id="reels-cost-up">$0.072</span></div>
+          <div class="cost-row total"><span>Total estimado</span><span class="cv" id="reels-cost-total">$0.40</span></div>
+        </div>
+        <button class="btn-primary full" onclick="mockGenerate('reels')">▶ Crear Reel</button>
+        <div class="progress-wrap" id="reels-progress" style="display:none">
+          <div class="progress-track"><div class="progress-fill" id="reels-pfill"></div></div>
+          <div class="progress-label"><span class="dot-pulse">●</span><span id="reels-pmsg">Generando...</span></div>
+        </div>
+        <div class="output-area" id="reels-output">
+          <video id="reels-output-video" controls loop playsinline style="max-height:420px;margin:0 auto;display:block"></video>
+          <div class="output-actions">
+            <button class="btn-primary" onclick="downloadOutput('reels')">⬇ Descargar</button>
+            <button class="btn-secondary" onclick="replicateCurrent('reels')">🔁 Replicar / Editar</button>
+            <button class="btn-secondary" onclick="resetOutput('reels')">Nueva generación</button>
+            <button class="btn-rh" id="rh-btn-reels" onclick="mockUpscale('reels')" style="display:none">⬆️ Escalar con RunningHub</button>
+          </div>
+          <div id="rh-progress-reels" style="display:none;margin-top:.5rem;background:var(--bg3);border-radius:8px;padding:.6rem .8rem;font-size:.8rem;color:var(--text2)">
+            <span class="dot-pulse">●</span> <span id="rh-msg-reels">Enviando a RunningHub...</span>
+          </div>
+          <div id="rh-result-reels" style="display:none;margin-top:.5rem;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:.6rem .8rem;font-size:.8rem;color:var(--green)">
+            ✅ <strong>Video escalado a 1080p listo.</strong> <span id="rh-result-link-reels"></span>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- History -->
-    <div class="card" id="history-section">
-      <div class="card-label">Historial local</div>
-      <div class="card-title" style="margin-bottom:.75rem">Resultados recientes</div>
-      <div class="history-list" id="history-list">
-        <div style="font-size:.82rem;color:var(--muted)">Todavía no hay videos generados.</div>
+    <!-- ─ TAB: UGC ─ -->
+    <div class="tab-pane" id="tab-ugc">
+      <div class="card">
+        <div class="eyebrow">UGC Videos</div>
+        <div class="card-title">Videos de producto con avatar IA</div>
+        <div class="info-banner">
+          <strong>UGC (User Generated Content):</strong> videos de reseña, unboxing y demostración de producto con tu avatar IA.<br>
+          <span class="hi">Wan 3.0 y Seedance</span> manejan expresiones naturales, manos y objetos.
+        </div>
+        <div class="upload-grid">
+          <div class="drop-zone">
+            <input type="file" accept="image/*" />
+            <span class="dz-icon">🖼️</span>
+            <span class="dz-label">Imagen del avatar</span>
+            <span class="dz-sub">JPG · PNG · WEBP</span>
+          </div>
+          <div class="drop-zone" id="ugc-ref-video-zone" style="min-height:110px;display:none">
+            <input type="file" accept="video/*" />
+            <span class="dz-icon">🎬</span>
+            <span class="dz-label" style="font-size:.72rem">Video de<br>referencia</span>
+            <span class="dz-sub">MP4 · MOV</span>
+          </div>
+          <div class="drop-zone" id="ugc-ref-img-zone" style="min-height:110px">
+            <input type="file" accept="image/*" />
+            <span class="dz-icon">📦</span>
+            <span class="dz-label" style="font-size:.72rem">Producto<br><em style="color:var(--muted)">(opcional)</em></span>
+          </div>
+        </div>
+        <div class="warn-banner" id="ugc-ref2v-warn" style="display:none">
+          ⚠️ <strong>Ref2V billing:</strong> se cobra duración del video de entrada + salida (ej: 5s ref + 15s output = 20s facturados).
+        </div>
+        <label class="field-label">Prompt del video UGC</label>
+        <textarea class="prompt" placeholder="Una mujer sostiene y muestra el producto a cámara sonriendo, lo abre, reacciona emocionada, movimientos naturales, fondo minimalista blanco..."></textarea>
+        <div class="row2">
+          <div class="field">
+            <label class="field-label">Duración <span id="ugc-dur-disp" style="color:var(--accent);font-weight:700">10s</span></label>
+            <div class="range-row">
+              <input type="range" min="5" max="15" value="10" step="1" oninput="setDur('ugc',this.value)" />
+              <span class="range-val" id="ugc-dur-val">10s</span>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field-label">Resolución</label>
+            <select onchange="updateCost('ugc')">
+              <option value="480p">480p</option>
+              <option value="720p">720p</option>
+            </select>
+          </div>
+        </div>
+        <label class="toggle-row" for="ugc-upscale">
+          <input type="checkbox" id="ugc-upscale" onchange="updateCost('ugc')" />
+          <div class="tgl-info">
+            <strong>✨ Escalar a 1080p (fal.ai ByteDance)</strong>
+            <span>+$0.0072/s · calidad final premium</span>
+          </div>
+          <span class="tgl-price" id="ugc-upscale-price">+$0.072</span>
+        </label>
+        <div class="cost-box">
+          <div class="cost-row"><span>Generación (<span id="ugc-model-name">Wan 3.0</span>)</span><span class="cv" id="ugc-cost-gen">$0.40</span></div>
+          <div class="cost-row" id="ugc-upscale-row" style="display:none"><span>Escalado 1080p</span><span class="cv" id="ugc-cost-up">$0.072</span></div>
+          <div class="cost-row total"><span>Total estimado</span><span class="cv" id="ugc-cost-total">$0.40</span></div>
+        </div>
+        <button class="btn-primary full" onclick="mockGenerate('ugc')">▶ Crear Video UGC</button>
+        <div class="progress-wrap" id="ugc-progress" style="display:none">
+          <div class="progress-track"><div class="progress-fill" id="ugc-pfill"></div></div>
+          <div class="progress-label"><span class="dot-pulse">●</span><span id="ugc-pmsg">Generando...</span></div>
+        </div>
+        <div class="output-area" id="ugc-output">
+          <video id="ugc-output-video" controls loop playsinline></video>
+          <div class="output-actions">
+            <button class="btn-primary" onclick="downloadOutput('ugc')">⬇ Descargar</button>
+            <button class="btn-secondary" onclick="replicateCurrent('ugc')">🔁 Replicar / Editar</button>
+            <button class="btn-secondary" onclick="resetOutput('ugc')">Nueva generación</button>
+            <button class="btn-rh" id="rh-btn-ugc" onclick="mockUpscale('ugc')" style="display:none">⬆️ Escalar con RunningHub</button>
+          </div>
+          <div id="rh-progress-ugc" style="display:none;margin-top:.5rem;background:var(--bg3);border-radius:8px;padding:.6rem .8rem;font-size:.8rem;color:var(--text2)">
+            <span class="dot-pulse">●</span> <span id="rh-msg-ugc">Enviando a RunningHub...</span>
+          </div>
+          <div id="rh-result-ugc" style="display:none;margin-top:.5rem;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:.6rem .8rem;font-size:.8rem;color:var(--green)">
+            ✅ <strong>Video escalado a 1080p listo.</strong> <span id="rh-result-link-ugc"></span>
+          </div>
+        </div>
       </div>
     </div>
 
-  </div>
+    <!-- ─ TAB: IMAGES ─ -->
+    <div class="tab-pane" id="tab-images">
+      <div class="card">
+        <div class="eyebrow">Imágenes IA</div>
+        <div class="card-title">Modelos · Productos · Creativos</div>
+        <div class="info-banner">
+          <strong>Generación de imágenes</strong> con <span class="hi">FLUX, SDXL, Nano Banana, Grok y DALL·E 3</span>.<br>
+          Ideal para fotos de modelos, creativos de productos, banners y thumbnails.
+        </div>
+        <label class="field-label">Prompt de imagen</label>
+        <textarea class="prompt" style="min-height:90px" placeholder="Modelo femenina de 25 años, ropa casual elegante, estudio minimalista con luz natural suave, foto de moda editorial, alta calidad, 4K..."></textarea>
+        <label class="field-label" style="margin-bottom:.5rem">Tamaño / Aspecto</label>
+        <div class="size-chips" id="size-chips">
+          <div class="size-chip sel" onclick="selectSize(this,'1:1')">1:1 Cuadrado</div>
+          <div class="size-chip" onclick="selectSize(this,'9:16')">9:16 Vertical</div>
+          <div class="size-chip" onclick="selectSize(this,'16:9')">16:9 Landscape</div>
+          <div class="size-chip" onclick="selectSize(this,'4:5')">4:5 Portrait</div>
+          <div class="size-chip" onclick="selectSize(this,'3:2')">3:2 Foto</div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label class="field-label">Cantidad</label>
+            <select>
+              <option>1 imagen</option>
+              <option>2 imágenes</option>
+              <option>4 imágenes</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label">Estilo</label>
+            <select>
+              <option>Fotorrealista</option>
+              <option>Artístico</option>
+              <option>Cinematográfico</option>
+              <option>Editorial</option>
+              <option>Publicitario</option>
+            </select>
+          </div>
+        </div>
+        <div class="cost-box">
+          <div class="cost-row"><span>Modelo (<span id="img-model-name">FLUX Schnell</span>)</span><span class="cv" id="img-cost">$0.003</span></div>
+          <div class="cost-row total"><span>Total estimado</span><span class="cv" id="img-cost-total">$0.003</span></div>
+        </div>
+        <button class="btn-primary full" onclick="mockGenerateImg()">✦ Generar Imagen</button>
+        <div class="progress-wrap" id="img-progress" style="display:none">
+          <div class="progress-track"><div class="progress-fill" id="img-pfill"></div></div>
+          <div class="progress-label"><span class="dot-pulse">●</span><span id="img-pmsg">Generando...</span></div>
+        </div>
+        <div class="output-area" id="img-output" style="display:none">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem" id="img-grid"></div>
+          <div class="output-actions">
+            <button class="btn-primary" onclick="downloadAllImages()">⬇ Descargar todo</button>
+            <button class="btn-secondary" onclick="replicateCurrent('images')">🔁 Replicar / Editar</button>
+            <button class="btn-secondary" onclick="resetOutput('img')">Nueva generación</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
-  <!-- ── RIGHT COLUMN ── -->
-  <div>
+    <!-- ─ TAB: VOICE ─ -->
+    <div class="tab-pane" id="tab-voice">
+      <div class="card">
+        <div class="eyebrow">Voz + Video</div>
+        <div class="card-title">TTS con ElevenLabs · Sincronizá con tu video</div>
+        <div class="info-banner">
+          <strong>Flujo:</strong> 1) Generá la voz con ElevenLabs · 2) Generá el video en Reels o UGC · 3) Combiná ambos en tu editor.<br>
+          <span class="hi">Pronto:</span> sincronización automática en servidor.
+        </div>
+        <div class="el-key-row">
+          <input type="password" class="api-input" placeholder="ElevenLabs API key: xi_..." id="el-api-key" />
+          <button class="btn-secondary" onclick="mockElCheck()">Verificar</button>
+        </div>
+        <div class="el-status" id="el-status">Sin clave · <a href="https://elevenlabs.io" target="_blank" style="color:var(--accent)">elevenlabs.io</a></div>
+        <hr class="sidebar-divider" />
+        <label class="field-label" style="margin-bottom:.6rem">Voces disponibles</label>
+        <div class="voice-grid" id="voice-grid">
+          <div class="voice-chip sel" onclick="selVoice(this)"><span class="vc-icon">👩</span><span><span>Rachel</span><span class="vc-meta">Femenina · EN</span></span></div>
+          <div class="voice-chip" onclick="selVoice(this)"><span class="vc-icon">👨</span><span><span>Adam</span><span class="vc-meta">Masculina · EN</span></span></div>
+          <div class="voice-chip" onclick="selVoice(this)"><span class="vc-icon">👩</span><span><span>Bella</span><span class="vc-meta">Femenina · EN</span></span></div>
+          <div class="voice-chip" onclick="selVoice(this)"><span class="vc-icon">👨</span><span><span>Antoni</span><span class="vc-meta">Masculina · EN</span></span></div>
+          <div class="voice-chip" onclick="selVoice(this)"><span class="vc-icon">🎤</span><span><span>Elli</span><span class="vc-meta">Femenina · EN</span></span></div>
+          <div class="voice-chip" onclick="selVoice(this)"><span class="vc-icon">🎤</span><span><span>Josh</span><span class="vc-meta">Masculina · EN</span></span></div>
+        </div>
+        <div class="row2" style="margin-bottom:.6rem">
+          <div class="field">
+            <label class="field-label">Estabilidad</label>
+            <div class="range-row">
+              <input type="range" min="0" max="100" value="50" style="accent-color:var(--purple)" />
+              <span class="range-val" style="color:var(--purple)">50</span>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field-label">Claridad</label>
+            <div class="range-row">
+              <input type="range" min="0" max="100" value="75" style="accent-color:var(--purple)" />
+              <span class="range-val" style="color:var(--purple)">75</span>
+            </div>
+          </div>
+        </div>
+        <label class="field-label">Texto para convertir a voz</label>
+        <textarea class="prompt" style="min-height:100px" placeholder="Hola, quiero mostrarte este producto increíble que cambió mi vida. Es perfecto para..."></textarea>
+        <div class="cost-box">
+          <div class="cost-row"><span>ElevenLabs (~1.000 caracteres)</span><span class="cv">$0.018</span></div>
+          <div class="cost-row total"><span>Total estimado</span><span class="cv">$0.018</span></div>
+        </div>
+        <button class="btn-primary full" onclick="mockTTS()">🎙 Generar Voz</button>
+        <div class="progress-wrap" id="voice-progress" style="display:none">
+          <div class="progress-track"><div class="progress-fill" id="voice-pfill"></div></div>
+          <div class="progress-label"><span class="dot-pulse">●</span><span id="voice-pmsg">Generando audio...</span></div>
+        </div>
+        <div class="output-area" id="voice-output" style="display:none">
+          <div style="background:var(--bg3);border-radius:10px;padding:1rem;display:flex;align-items:center;gap:1rem">
+            <button onclick="this.textContent=this.textContent==='▶'?'⏸':'▶'" style="width:42px;height:42px;background:var(--accent);border:none;border-radius:50%;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#1a0d2e;font-weight:700;flex-shrink:0">▶</button>
+            <div style="flex:1">
+              <div style="height:4px;background:var(--border2);border-radius:2px"><div style="height:100%;background:linear-gradient(90deg,var(--purple),var(--accent));border-radius:2px;width:0%;animation:voiceprog 3s ease forwards" id="voice-bar"></div></div>
+              <div style="font-size:.72rem;color:var(--muted);margin-top:.35rem" id="voice-dur">0:00 / 0:00</div>
+            </div>
+          </div>
+          <div class="output-actions">
+            <button class="btn-primary">⬇ Descargar MP3</button>
+            <button class="btn-secondary" onclick="resetOutput('voice')">Nueva voz</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── History (always visible) ── -->
     <div class="card">
-      <div class="card-label">Motor manual</div>
-      <div class="card-title">Sin ambigüedad</div>
-      <div class="model-list" id="model-list"></div>
-
-      <div style="font-size:.75rem;color:var(--muted);margin-top:.5rem">
-        <strong style="color:var(--text)">Calidad y precio</strong><br>
-        Elegí un motor para ver las calidades disponibles y el costo estimado.
-        <br><br>
-        ✅ Wan 3.0 + escalado = <strong style="color:var(--pink)">~$0.71 / clip 15s</strong>
+      <div class="eyebrow">Historial</div>
+      <div class="card-title" style="margin-bottom:.75rem">Generaciones recientes</div>
+      <div class="history-list" id="history-list">
+        <div style="font-size:.8rem;color:var(--muted)">Todavía no hay generaciones.</div>
       </div>
     </div>
-  </div>
-</main>
 
-<!-- Modal de ayuda -->
-<div id="modal">
-  <div class="modal-box">
-    <h3>Cómo usar Video Workflow</h3>
-    <p>
-      1. Pegá tu API key de <a href="https://console.siray.ai" target="_blank" style="color:var(--pink)">Siray</a> arriba y guardala.<br><br>
-      2. Subí la imagen de tu avatar.<br><br>
-      3. Escribí un prompt describiendo el movimiento.<br><br>
-      4. Elegí el motor (Wan 3.0 recomendado) y la duración.<br><br>
-      5. Activá el escalado a 1080p si querés calidad final.<br><br>
-      6. Hacé click en <strong>Crear video</strong>.
-    </p>
-    <div class="modal-actions">
-      <button class="btn-pink" onclick="closeModal()">Entendido</button>
+  </div>
+
+  <!-- ═══ RIGHT COLUMN ═══ -->
+  <div>
+
+    <!-- API Keys card -->
+    <div class="card" id="api-card">
+      <div class="eyebrow">Configuración</div>
+      <div class="card-title">API Keys</div>
+      <label class="field-label">Siray AI (videos e imágenes)</label>
+      <div class="api-row" style="margin-bottom:.5rem">
+        <input type="password" class="api-input" id="siray-key" placeholder="sk_..." />
+        <button class="btn-primary" onclick="mockSave('siray')">Guardar</button>
+      </div>
+      <div class="api-status" id="siray-status">Sin clave · <a href="https://console.siray.ai" target="_blank" style="color:var(--accent)">console.siray.ai</a></div>
+      <hr class="sidebar-divider" />
+      <label class="field-label">ElevenLabs (voz)</label>
+      <div class="api-row" style="margin-bottom:.5rem">
+        <input type="password" class="api-input" id="el-key-sidebar" placeholder="xi_..." />
+        <button class="btn-primary" onclick="mockSave('el')">Guardar</button>
+      </div>
+      <div class="api-status" id="el-status-sidebar">Sin clave · <a href="https://elevenlabs.io" target="_blank" style="color:var(--accent)">elevenlabs.io</a></div>
+      <hr class="sidebar-divider" />
+      <label class="field-label">RunningHub (escalador)</label>
+      <div class="api-row" style="margin-bottom:.5rem">
+        <input type="password" class="api-input" id="rh-key" placeholder="rh_..." />
+        <button class="btn-primary" onclick="mockSave('rh')">Guardar</button>
+      </div>
+      <div style="margin-bottom:.5rem">
+        <input type="text" class="api-input" id="rh-workflow" placeholder="ID del workflow de escalado" style="width:100%;font-size:.8rem" />
+      </div>
+      <div class="api-status" id="rh-status">Sin clave · <a href="https://runninghub.ai" target="_blank" style="color:var(--accent)">runninghub.ai</a></div>
     </div>
+
+    <!-- Model selector (context-aware) -->
+    <div class="card" id="model-card">
+      <div class="eyebrow" id="model-card-eye">Motor de video</div>
+      <div class="card-title" id="model-card-title">Elegí el modelo</div>
+      <div class="model-list" id="model-list"></div>
+      <div class="info-banner" id="model-tip" style="margin-bottom:0">
+        <strong>✅ Wan 3.0 + escalado</strong> = <span class="hi">~$0.71 / clip 15s</span><br>
+        La opción más rentable con calidad 1080p final.
+      </div>
+    </div>
+
   </div>
 </div>
 
+<style>
+@keyframes voiceprog { to { width: 72%; } }
+.btn-rh {
+  background: rgba(34,197,94,.15);
+  border: 1px solid rgba(34,197,94,.45);
+  color: #4ade80;
+  padding: .42rem .9rem;
+  border-radius: 8px;
+  font-size: .8rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background .15s, border-color .15s;
+}
+.btn-rh:hover { background: rgba(34,197,94,.25); border-color: rgba(34,197,94,.7); }
+</style>
+
 <script>
-// ── State ──────────────────────────────────────────────────────────────────
-let apiKey = localStorage.getItem('siray_api_key') || '';
-let selectedModel = 'wan3-i2v';
-let uploadedImageFilename = '';
-let uploadedRefVideoFilename = '';
-let currentTaskId = '';
-let pollInterval = null;
-let models = {};
-
-// ── Init ───────────────────────────────────────────────────────────────────
-async function init() {
-  if (apiKey) {
-    document.getElementById('api-key-input').value = apiKey;
-    await verifyAndShowBalance();
+// ── Models per category ──────────────────────────────────────────────────────
+const CATS = {
+  reels: {
+    eyebrow: 'Motor · Reels & Social',
+    title: 'Elegí el modelo',
+    tip: '✅ Wan 3.0 + escalado = <span class="hi">~$0.71 / clip 15s</span><br>Ideal para TikTok e Instagram.',
+    models: {
+      'wan3': { name:'Wan 3.0', badge:'RECOMENDADO', bc:'', desc:'Movimientos naturales, expresiones, danza.', maxDur:15, price:0.040, res:['480p','720p'], needsRef:false },
+      'wan3-spicy': { name:'Wan 3.0 Spicy', badge:'🔞 SIN CENSURA', bc:'red', desc:'Igual que Wan 3.0 pero sin restricciones de contenido. Hasta 1080p.', maxDur:15, price:0.045, res:['480p','720p','1080p'], needsRef:false },
+      'kling': { name:'Kling Motion', badge:'', bc:'', desc:'Coreografías, cámara fija, bailes limpios.', maxDur:10, price:0.090, res:['720p'], needsRef:false },
+      'kling-spicy': { name:'Kling Master (sin censura)', badge:'🔞 SIN CENSURA', bc:'red', desc:'Kling v2.0 sin filtros, ideal para bailes y movimientos corporales libres.', maxDur:10, price:0.090, res:['720p'], needsRef:false },
+      'minimax-v01': { name:'MiniMax Video-01', badge:'', bc:'', desc:'Alta calidad de movimiento y expresiones faciales. Muy bueno para personas.', maxDur:6, price:0.110, res:['720p'], needsRef:false },
+      'minimax-live': { name:'MiniMax Video-01 Live', badge:'POTENTE', bc:'', desc:'Versión Live: movimiento hiper-realista, ideal para reels de avatares y UGC.', maxDur:6, price:0.130, res:['720p','1080p'], needsRef:false },
+      'minimax-live-spicy': { name:'MiniMax Live (sin censura)', badge:'🔞 SIN CENSURA', bc:'red', desc:'MiniMax Video-01 Live sin filtros de contenido.', maxDur:6, price:0.130, res:['720p','1080p'], needsRef:false },
+      'seedance-20': { name:'Seedance 2.0', badge:'NUEVO', bc:'', desc:'Mayor coherencia temporal y mejor calidad de movimiento que 1.0.', maxDur:10, price:0.160, res:['480p','720p'], needsRef:false },
+      'seedance-25': { name:'Seedance 2.5', badge:'TOP', bc:'gb', desc:'Última versión de Seedance, físicas ultra-realistas y manos perfectas.', maxDur:10, price:0.190, res:['480p','720p','1080p'], needsRef:false },
+      'wan3-ref': { name:'Wan 3.0 Ref2V', badge:'VIDEO REF', bc:'pb', desc:'Cloná movimientos desde un video de referencia. Ideal para coreografías y danzas.', maxDur:15, price:0.040, res:['480p','720p'], needsRef:true },
+    }
+  },
+  ugc: {
+    eyebrow: 'Motor · UGC Videos',
+    title: 'Elegí el modelo',
+    tip: '✅ <span class="hi">Seedance 2.5</span> para físicas complejas y manos sosteniendo productos.',
+    models: {
+      'wan3': { name:'Wan 3.0', badge:'RECOMENDADO', bc:'', desc:'Diálogo natural, manos, varias personas.', maxDur:15, price:0.040, res:['480p','720p'], needsRef:false },
+      'wan3-spicy': { name:'Wan 3.0 Spicy', badge:'🔞 SIN CENSURA', bc:'red', desc:'Sin restricciones de contenido. Hasta 1080p.', maxDur:15, price:0.045, res:['480p','720p','1080p'], needsRef:false },
+      'minimax-v01': { name:'MiniMax Video-01', badge:'', bc:'', desc:'Alta calidad de movimiento y expresiones faciales. Muy bueno para UGC.', maxDur:6, price:0.110, res:['720p'], needsRef:false },
+      'minimax-live': { name:'MiniMax Video-01 Live', badge:'POTENTE', bc:'', desc:'Movimiento hiper-realista, ideal para demos de productos y avatares.', maxDur:6, price:0.130, res:['720p','1080p'], needsRef:false },
+      'minimax-live-spicy': { name:'MiniMax Live (sin censura)', badge:'🔞 SIN CENSURA', bc:'red', desc:'MiniMax Video-01 Live sin filtros de contenido.', maxDur:6, price:0.130, res:['720p','1080p'], needsRef:false },
+      'seedance': { name:'Seedance 1.0', badge:'', bc:'', desc:'Físicas complejas, movimientos rápidos, manos.', maxDur:10, price:0.134, res:['480p','720p'], needsRef:false },
+      'seedance-20': { name:'Seedance 2.0', badge:'NUEVO', bc:'', desc:'Mayor coherencia temporal y mejor calidad de movimiento que 1.0.', maxDur:10, price:0.160, res:['480p','720p'], needsRef:false },
+      'seedance-25': { name:'Seedance 2.5', badge:'TOP', bc:'gb', desc:'Última versión, físicas ultra-realistas, ideal para manos con productos.', maxDur:10, price:0.190, res:['480p','720p','1080p'], needsRef:false },
+      'veo3': { name:'Veo 3', badge:'BETA', bc:'gb', desc:'Modelo de Google, alta calidad cinematográfica.', maxDur:8, price:0.240, res:['720p','1080p'], needsRef:false },
+      'wan3-ref': { name:'Wan 3.0 Ref2V', badge:'VIDEO REF', bc:'pb', desc:'Cloná movimientos desde un video de referencia.', maxDur:15, price:0.040, res:['480p','720p'], needsRef:true },
+    }
+  },
+  images: {
+    eyebrow: 'Motor · Imágenes IA',
+    title: 'Elegí el modelo',
+    tip: '<strong>FLUX Schnell</strong> = rápido y económico (~$0.003/img) · <span class="hi">Nano Banana 2.1</span> = top calidad · <span class="hi">Grok Aurora</span> = fotorrealismo',
+    models: {
+      'flux-schnell': { name:'FLUX Schnell', badge:'RÁPIDO', bc:'', desc:'Generación en ~3s, ideal para drafts y pruebas.', maxDur:0, price:0.003, res:[], needsRef:false },
+      'flux-dev': { name:'FLUX Dev', badge:'CALIDAD', bc:'', desc:'Mejor coherencia y detalle. Ideal para publicar.', maxDur:0, price:0.025, res:[], needsRef:false },
+      'sdxl': { name:'SDXL 1.0', badge:'', bc:'', desc:'Estilo artístico, ilustraciones, render 3D.', maxDur:0, price:0.006, res:[], needsRef:false },
+      'nano-banana-2': { name:'Nano Banana 2', badge:'', bc:'', desc:'Alta fidelidad de detalles y texturas. Muy bueno para productos.', maxDur:0, price:0.018, res:[], needsRef:false },
+      'nano-banana-21': { name:'Nano Banana 2.1', badge:'NUEVO', bc:'', desc:'Versión mejorada con mejor coherencia y resolución hasta 2K.', maxDur:0, price:0.022, res:[], needsRef:false },
+      'grok-aurora': { name:'Grok Aurora (xAI)', badge:'FOTO', bc:'', desc:'Fotorrealismo extremo generado por xAI. Muy natural en personas.', maxDur:0, price:0.020, res:[], needsRef:false },
+      'dalle3': { name:'DALL·E 3 (OpenAI)', badge:'', bc:'', desc:'Generación guiada por prompt preciso. Excelente en escenas complejas.', maxDur:0, price:0.040, res:[], needsRef:false },
+      'flux-schnell-spicy': { name:'FLUX Schnell Spicy', badge:'🔞 SIN CENSURA', bc:'red', desc:'Versión sin restricciones de FLUX Schnell. Mismo precio, sin filtros.', maxDur:0, price:0.003, res:[], needsRef:false },
+      'flux-dev-spicy': { name:'FLUX Dev Spicy', badge:'🔞 SIN CENSURA', bc:'red', desc:'FLUX Dev sin censura, máxima calidad sin restricciones de contenido.', maxDur:0, price:0.025, res:[], needsRef:false },
+      'pony-diffusion': { name:'Pony Diffusion XL', badge:'🔞 SIN CENSURA', bc:'red', desc:'Modelo sin censura popular para ilustración, anime y contenido adulto.', maxDur:0, price:0.006, res:[], needsRef:false },
+    }
+  },
+  voice: {
+    eyebrow: 'ElevenLabs · TTS',
+    title: 'Configuración de voz',
+    tip: 'Los primeros <span class="hi">10.000 caracteres/mes son gratis</span> en el plan Free de ElevenLabs.',
+    models: {}
   }
-  await loadModels();
-  loadHistory();
-}
+};
 
-async function loadModels() {
+let selModels = { reels:'wan3', ugc:'wan3', images:'flux-schnell', voice:'' };
+let currentTab = 'reels';
+let imgSelSize = '1:1';
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+function init() {
   try {
-    const res = await fetch('/api/models');
-    models = await res.json();
-    renderModels();
-  } catch (e) {
-    console.error('Error cargando modelos', e);
-  }
+    const k = localStorage.getItem('siray_key_demo');
+    if (k) { document.getElementById('siray-key').value = k; showSirayStatus(k); }
+  } catch {}
+  try {
+    const rk = localStorage.getItem('rh_key_demo');
+    const rwf = localStorage.getItem('rh_workflow_demo') || '';
+    if (rk) {
+      document.getElementById('rh-key').value = rk;
+      document.getElementById('rh-workflow').value = rwf;
+      showRhStatus(rk, rwf);
+    }
+  } catch {}
+  renderModels('reels');
 }
 
-function renderModels() {
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.cat-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  btn.classList.add('active');
+  currentTab = tab;
+  renderModels(tab);
+}
+
+// ── Models ────────────────────────────────────────────────────────────────────
+function renderModels(tab) {
+  const cat = CATS[tab];
+  document.getElementById('model-card-eye').textContent = cat.eyebrow;
+  document.getElementById('model-card-title').textContent = cat.title;
+  document.getElementById('model-tip').innerHTML = cat.tip;
   const list = document.getElementById('model-list');
   list.innerHTML = '';
-  for (const [key, m] of Object.entries(models)) {
-    const el = document.createElement('div');
-    el.className = 'model-card' + (key === selectedModel ? ' selected' : '');
-    el.onclick = () => selectModel(key);
-    el.innerHTML = `
-      <div class="model-card-header">
+  if (Object.keys(cat.models).length === 0) {
+    document.getElementById('model-card').style.display = 'none';
+    return;
+  }
+  document.getElementById('model-card').style.display = '';
+  const sel = selModels[tab];
+  for (const [k, m] of Object.entries(cat.models)) {
+    const d = document.createElement('div');
+    d.className = 'model-card' + (k === sel ? ' sel' : '');
+    d.onclick = () => pickModel(tab, k);
+    const priceStr = tab === 'images' ? `$${m.price.toFixed(3)}/imagen` : `$${m.price.toFixed(3)}/s · max ${m.maxDur}s`;
+    d.innerHTML = `
+      <div class="mc-head">
         <strong>${m.name}</strong>
-        ${m.badge ? `<span class="badge${m.badge === 'VIDEO REF' ? ' purple' : ' new'}">${m.badge}</span>` : ''}
-        <span class="max-dur">max ${m.max_duration}s</span>
+        ${m.badge ? `<span class="mc-badge ${m.bc}">${m.badge}</span>` : ''}
+        ${tab !== 'images' ? `<span class="mc-dur">max ${m.maxDur}s</span>` : ''}
       </div>
-      <div class="model-desc">${m.description}</div>
-      <div class="model-price">$${m.price_per_sec.toFixed(3)}/s · ${m.resolution.join(', ')}</div>
+      <div class="mc-desc">${m.desc}</div>
+      <div class="mc-price">${priceStr}</div>
     `;
-    list.appendChild(el);
+    list.appendChild(d);
   }
-  updateCost();
+  updateCost(tab);
 }
 
-function selectModel(key) {
-  selectedModel = key;
-  document.querySelectorAll('.model-card').forEach((el, i) => {
-    const k = Object.keys(models)[i];
-    el.classList.toggle('selected', k === key);
+function pickModel(tab, key) {
+  selModels[tab] = key;
+  document.querySelectorAll('#model-list .model-card').forEach((el, i) => {
+    el.classList.toggle('sel', Object.keys(CATS[tab].models)[i] === key);
   });
-  const m = models[key];
-  // Adjust duration max
-  const dur = document.getElementById('duration');
-  dur.max = m.max_duration;
-  if (parseInt(dur.value) > m.max_duration) {
-    dur.value = m.max_duration;
-    updateDuration(m.max_duration);
-  }
-  // Adjust resolution options
-  const res = document.getElementById('resolution');
-  const current = res.value;
-  res.innerHTML = m.resolution.map(r => `<option value="${r}"${r===current?' selected':''}>${r}${r==='480p'?' (más barato)':''}</option>`).join('');
-  // Show/hide ref video zone and billing note
-  const needsRef = m.needs_ref_video === true;
-  document.getElementById('drop-ref-video').style.display = needsRef ? '' : 'none';
-  document.getElementById('drop-model-img').style.display = needsRef ? 'none' : '';
-  document.getElementById('ref2v-billing-note').style.display = needsRef ? '' : 'none';
-  updateCost();
-}
-
-// ── API Key ────────────────────────────────────────────────────────────────
-async function saveApiKey() {
-  const val = document.getElementById('api-key-input').value.trim();
-  if (!val) return;
-  apiKey = val;
-  localStorage.setItem('siray_api_key', val);
-  await verifyAndShowBalance();
-}
-
-async function verifyAndShowBalance() {
-  const el = document.getElementById('api-status');
-  el.innerHTML = '<span class="pulse" style="color:var(--pink)">●</span> Verificando...';
-  try {
-    const fd = new FormData();
-    fd.append('api_key', apiKey);
-    const res = await fetch('/api/balance', { method: 'POST', body: fd });
-    const data = await res.json();
-    if (data.balance >= 0) {
-      const masked = apiKey.slice(0, 6) + '...' + apiKey.slice(-4);
-      el.innerHTML = `<span class="ok">✓ Clave guardada: ${masked}</span> · Saldo: <span class="bal">$${data.balance.toFixed(2)}</span>`;
+  const m = CATS[tab].models[key];
+  // Ref video toggle for UGC and Reels
+  if (tab === 'ugc' || tab === 'reels') {
+    const refVid = document.getElementById(tab + '-ref-video-zone');
+    const refImg = document.getElementById(tab + '-ref-img-zone');
+    const warn = document.getElementById(tab + '-ref2v-warn');
+    if (m.needsRef) {
+      if (refVid) refVid.style.display = '';
+      if (refImg) refImg.style.display = 'none';
+      if (warn) warn.style.display = '';
     } else {
-      el.innerHTML = '<span style="color:var(--red)">✗ Clave inválida o no se pudo verificar</span>';
+      if (refVid) refVid.style.display = 'none';
+      if (refImg) refImg.style.display = '';
+      if (warn) warn.style.display = 'none';
     }
-  } catch {
-    el.innerHTML = '<span style="color:var(--amber)">⚠ No se pudo verificar el saldo (clave guardada igual)</span>';
   }
-}
-
-// ── Image upload ───────────────────────────────────────────────────────────
-async function handleImageUpload(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const fd = new FormData();
-  fd.append('file', file);
-  try {
-    const res = await fetch('/api/upload-image', { method: 'POST', body: fd });
-    const data = await res.json();
-    uploadedImageFilename = data.filename;
-    // Show preview
-    const dz = document.getElementById('drop-video');
-    const img = document.createElement('img');
-    img.src = data.path;
-    const existing = dz.querySelector('img');
-    if (existing) existing.remove();
-    dz.appendChild(img);
-  } catch (e) {
-    alert('Error subiendo imagen: ' + e.message);
+  // Image model cost
+  if (tab === 'images') {
+    document.getElementById('img-model-name').textContent = m.name;
+    document.getElementById('img-cost').textContent = '$' + m.price.toFixed(3);
+    document.getElementById('img-cost-total').textContent = '$' + m.price.toFixed(3);
+    return;
   }
-}
-
-async function handleRefImage(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    const dz = document.getElementById('drop-model-img');
-    const img = document.createElement('img');
-    img.src = e.target.result;
-    const existing = dz.querySelector('img');
-    if (existing) existing.remove();
-    dz.appendChild(img);
-  };
-  reader.readAsDataURL(file);
-}
-
-async function handleRefVideoUpload(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const fd = new FormData();
-  fd.append('file', file);
-  const dz = document.getElementById('drop-ref-video');
-  dz.querySelector('.label').textContent = 'Subiendo...';
-  try {
-    const res = await fetch('/api/upload-video', { method: 'POST', body: fd });
-    const data = await res.json();
-    uploadedRefVideoFilename = data.filename;
-    dz.querySelector('.label').textContent = file.name.slice(0, 20);
-    dz.querySelector('.icon').textContent = '✅';
-    dz.querySelector('.sub').textContent = (file.size / 1024 / 1024).toFixed(1) + ' MB';
-  } catch (e) {
-    dz.querySelector('.label').textContent = 'Error al subir';
-    alert('Error subiendo video: ' + e.message);
+  // Adjust duration max
+  if (tab !== 'images' && tab !== 'voice') {
+    const dur = document.getElementById(tab + '-dur-val');
+    const durSlider = dur.closest('.range-row').querySelector('input');
+    durSlider.max = m.maxDur;
+    if (+durSlider.value > m.maxDur) { durSlider.value = m.maxDur; setDur(tab, m.maxDur); }
+    if (document.getElementById(tab + '-model-name')) document.getElementById(tab + '-model-name').textContent = m.name;
   }
+  updateCost(tab);
 }
 
-// ── Duration ───────────────────────────────────────────────────────────────
-function updateDuration(val) {
-  document.getElementById('dur-val').textContent = val + 's';
-  document.getElementById('dur-label').textContent = val + 's';
-  updateCost();
+// ── Duration ──────────────────────────────────────────────────────────────────
+function setDur(tab, v) {
+  if (document.getElementById(tab + '-dur-val')) document.getElementById(tab + '-dur-val').textContent = v + 's';
+  if (document.getElementById(tab + '-dur-disp')) document.getElementById(tab + '-dur-disp').textContent = v + 's';
+  updateCost(tab);
 }
 
-// ── Cost estimate ──────────────────────────────────────────────────────────
-async function updateCost() {
-  const m = models[selectedModel];
+// ── Cost ──────────────────────────────────────────────────────────────────────
+function updateCost(tab) {
+  if (tab === 'images' || tab === 'voice') return;
+  const m = CATS[tab].models[selModels[tab]];
   if (!m) return;
-  const dur = parseInt(document.getElementById('duration').value) || 10;
-  const upscale = document.getElementById('upscale-check').checked;
+  const durEl = document.getElementById(tab + '-dur-val');
+  const dur = durEl ? parseInt(durEl.textContent) || 10 : 10;
+  const upCheck = document.getElementById(tab + '-upscale');
+  const up = upCheck ? upCheck.checked : false;
+  const gen = m.price * dur;
+  const upCost = up ? 0.0072 * dur : 0;
+  const total = gen + upCost;
+  if (document.getElementById(tab + '-cost-gen')) document.getElementById(tab + '-cost-gen').textContent = '$' + gen.toFixed(3);
+  if (document.getElementById(tab + '-cost-total')) document.getElementById(tab + '-cost-total').textContent = '$' + total.toFixed(3);
+  if (document.getElementById(tab + '-upscale-price')) document.getElementById(tab + '-upscale-price').textContent = '+$' + (0.0072 * dur).toFixed(3);
+  const upRow = document.getElementById(tab + '-upscale-row');
+  if (upRow) {
+    upRow.style.display = up ? '' : 'none';
+    if (document.getElementById(tab + '-cost-up')) document.getElementById(tab + '-cost-up').textContent = '$' + upCost.toFixed(3);
+  }
+}
 
-  const genCost = (m.price_per_sec * dur).toFixed(3);
-  const upCost = upscale ? (0.0072 * dur).toFixed(3) : 0;
-  const total = (parseFloat(genCost) + parseFloat(upCost)).toFixed(3);
+// ── Upload con previsualización ───────────────────────────────────────────────
+function mockUpload(zone, type) {
+  // delegate click to the hidden file input
+  const inp = zone.querySelector('input[type=file]');
+  if (inp) { inp.click(); }
+}
 
-  document.getElementById('cost-model-name').textContent = m.name;
-  document.getElementById('cost-gen').textContent = '$' + genCost;
-  document.getElementById('cost-total').textContent = '$' + total;
-  document.getElementById('upscale-price-tag').textContent = '+$' + (0.0072 * dur).toFixed(3);
-
-  const upRow = document.getElementById('cost-upscale-row');
-  if (upscale) {
-    upRow.style.display = '';
-    document.getElementById('cost-up').textContent = '$' + upCost;
+document.addEventListener('change', function(e) {
+  if (e.target.type !== 'file') return;
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  const zone = e.target.closest('.drop-zone');
+  if (!zone) return;
+  zone.classList.add('has-file');
+  const isVideo = file.type.startsWith('video/');
+  if (isVideo) {
+    zone.querySelector('.dz-icon').textContent = '✅';
+    zone.querySelector('.dz-label').textContent = file.name.length > 22 ? file.name.slice(0,20)+'…' : file.name;
   } else {
-    upRow.style.display = 'none';
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      // remove any existing preview
+      const old = zone.querySelector('.dz-preview-img');
+      if (old) old.remove();
+      const img = document.createElement('img');
+      img.src = ev.target.result;
+      img.className = 'dz-preview-img';
+      img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit;opacity:.55;pointer-events:none;';
+      zone.style.position = 'relative';
+      zone.appendChild(img);
+      zone.querySelector('.dz-icon').textContent = '✅';
+      zone.querySelector('.dz-label').textContent = file.name.length > 22 ? file.name.slice(0,20)+'…' : file.name;
+    };
+    reader.readAsDataURL(file);
   }
+});
+
+// ── Mock generation ───────────────────────────────────────────────────────────
+function mockGenerate(tab) {
+  const pg = document.getElementById(tab + '-progress');
+  const fill = document.getElementById(tab + '-pfill');
+  const msg = document.getElementById(tab + '-pmsg');
+  const output = document.getElementById(tab + '-output');
+  pg.style.display = ''; output.style.display = 'none';
+  const msgs = ['Enviando a Siray AI...', 'En cola...', 'Generando frames...', 'Procesando...', 'Casi listo...'];
+  let pct = 5, step = 0;
+  const iv = setInterval(() => {
+    pct = Math.min(pct + (Math.random() * 8 + 3), 95);
+    fill.style.width = pct + '%';
+    if (step < msgs.length) msg.textContent = msgs[step++];
+  }, 900);
+  setTimeout(() => {
+    clearInterval(iv);
+    fill.style.width = '100%';
+    msg.textContent = '✓ Completado';
+    setTimeout(() => {
+      pg.style.display = 'none';
+      output.style.display = 'block';
+      addHistory(tab);
+      // show RH upscale button if key is set
+      try {
+        const rhk = localStorage.getItem('rh_key_demo');
+        const rhBtn = document.getElementById('rh-btn-' + tab);
+        if (rhk && rhBtn) {
+          rhBtn.style.display = '';
+          rhBtn.disabled = false;
+          rhBtn.textContent = '⬆️ Escalar con RunningHub';
+          document.getElementById('rh-progress-' + tab).style.display = 'none';
+          document.getElementById('rh-result-' + tab).style.display = 'none';
+        }
+      } catch {}
+    }, 600);
+  }, 8500);
 }
 
-// ── Generate ───────────────────────────────────────────────────────────────
-async function generateVideo() {
-  if (!apiKey) { alert('Primero guardá tu API key de Siray.'); return; }
-  if (!uploadedImageFilename) { alert('Subí una imagen del avatar primero.'); return; }
-  const prompt = document.getElementById('prompt').value.trim();
-  if (!prompt) { alert('Escribí un prompt describiendo el movimiento.'); return; }
-  const m = models[selectedModel];
-  if (m && m.needs_ref_video && !uploadedRefVideoFilename) { alert('Este modelo requiere un video de referencia.'); return; }
-
-  const btn = document.getElementById('btn-generate');
-  btn.disabled = true;
-  btn.textContent = 'Generando...';
-  document.getElementById('progress-section').style.display = '';
-  document.getElementById('video-output').style.display = 'none';
-  setProgress(10, 'Enviando solicitud a Siray...');
-
-  const fd = new FormData();
-  fd.append('api_key', apiKey);
-  fd.append('model_key', selectedModel);
-  fd.append('image_filename', uploadedImageFilename);
-  fd.append('prompt', prompt);
-  fd.append('duration', document.getElementById('duration').value);
-  fd.append('resolution', document.getElementById('resolution').value);
-  if (uploadedRefVideoFilename) fd.append('ref_video_filename', uploadedRefVideoFilename);
-
-  try {
-    const res = await fetch('/api/generate', { method: 'POST', body: fd });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.detail || 'Error del servidor');
-    }
-    const data = await res.json();
-    currentTaskId = data.task_id;
-    setProgress(25, 'Generando video... esto tarda 1–3 minutos');
-    startPolling();
-    loadHistory();
-  } catch (e) {
-    setProgress(0, '');
-    document.getElementById('progress-section').style.display = 'none';
-    btn.disabled = false;
-    btn.textContent = 'Crear video';
-    alert('Error: ' + e.message);
-  }
+function mockGenerateImg() {
+  const pg = document.getElementById('img-progress');
+  const fill = document.getElementById('img-pfill');
+  const msg = document.getElementById('img-pmsg');
+  const output = document.getElementById('img-output');
+  const grid = document.getElementById('img-grid');
+  pg.style.display = ''; output.style.display = 'none';
+  let pct = 5;
+  const iv = setInterval(() => { pct = Math.min(pct + 15, 95); fill.style.width = pct + '%'; }, 300);
+  setTimeout(() => {
+    clearInterval(iv);
+    fill.style.width = '100%';
+    msg.textContent = '✓ Imagen generada';
+    setTimeout(() => {
+      pg.style.display = 'none';
+      grid.innerHTML = `<div style="background:linear-gradient(135deg,var(--bg3),var(--bg4));border-radius:10px;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:2rem">🖼️</div>`;
+      output.style.display = 'block';
+      addHistory('images');
+    }, 400);
+  }, 2800);
 }
 
-function startPolling() {
-  clearInterval(pollInterval);
-  let progress = 30;
-  pollInterval = setInterval(async () => {
-    try {
-      const res = await fetch(`/api/status/${currentTaskId}?api_key=${encodeURIComponent(apiKey)}`);
-      const data = await res.json();
-
-      if (data.status === 'completed' && data.video_url) {
-        clearInterval(pollInterval);
-        setProgress(100, 'Video listo ✓');
-        setTimeout(() => showVideo(data.video_url), 300);
-        loadHistory();
-      } else if (data.status === 'failed') {
-        clearInterval(pollInterval);
-        setProgress(0, '');
-        document.getElementById('progress-section').style.display = 'none';
-        alert('La generación falló. Revisá los logs del servidor.');
-        resetBtn();
-      } else {
-        progress = Math.min(progress + 4, 88);
-        setProgress(progress, 'Procesando en Siray... ' + (data.status || ''));
-      }
-    } catch { /* seguir intentando */ }
-  }, 4000);
+function mockTTS() {
+  const pg = document.getElementById('voice-progress');
+  const fill = document.getElementById('voice-pfill');
+  const msg = document.getElementById('voice-pmsg');
+  const output = document.getElementById('voice-output');
+  pg.style.display = ''; output.style.display = 'none';
+  let pct = 10;
+  const iv = setInterval(() => { pct = Math.min(pct + 20, 95); fill.style.width = pct + '%'; }, 300);
+  setTimeout(() => {
+    clearInterval(iv);
+    fill.style.width = '100%';
+    msg.textContent = '✓ Audio generado';
+    setTimeout(() => {
+      pg.style.display = 'none';
+      output.style.display = 'block';
+      document.getElementById('voice-bar').style.animation = 'none';
+      document.getElementById('voice-bar').style.width = '0%';
+      void document.getElementById('voice-bar').offsetHeight;
+      document.getElementById('voice-bar').style.animation = 'voiceprog 3s ease forwards';
+      document.getElementById('voice-dur').textContent = '0:00 / 0:24';
+      addHistory('voice');
+    }, 400);
+  }, 2000);
 }
 
-function setProgress(pct, msg) {
-  document.getElementById('progress-bar').style.width = pct + '%';
-  document.getElementById('status-msg').textContent = msg;
+// ── History ───────────────────────────────────────────────────────────────────
+let histItems = [];
+const catLabels = { reels:'Reels', ugc:'UGC', images:'Imagen', voice:'Voz' };
+function addHistory(tab) {
+  const m = CATS[tab].models[selModels[tab]];
+  const durEl = document.getElementById(tab + '-dur-val');
+  const dur = durEl ? parseInt(durEl.textContent) || 10 : 10;
+  const promptEl = document.querySelector('#tab-' + tab + ' .prompt');
+  const prompt = promptEl ? promptEl.value : '';
+  const price = tab === 'images' ? (m ? m.price : 0.003) : tab === 'voice' ? 0.018 : (m ? m.price * dur : 0.40);
+  histItems.unshift({ tab, cat: catLabels[tab], model: m ? m.name : 'ElevenLabs', modelKey: selModels[tab], cost: price.toFixed(3), prompt, dur });
+  renderHistory();
 }
-
-function showVideo(url) {
-  const vid = document.getElementById('output-video');
-  vid.src = url;
-  const dl = document.getElementById('download-btn');
-  dl.href = url;
-  document.getElementById('video-output').style.display = '';
-  document.getElementById('progress-section').style.display = 'none';
-  resetBtn();
-}
-
-function resetBtn() {
-  const btn = document.getElementById('btn-generate');
-  btn.disabled = false;
-  btn.textContent = 'Crear video';
-}
-
-function resetForm() {
-  document.getElementById('video-output').style.display = 'none';
-  document.getElementById('progress-section').style.display = 'none';
-  currentTaskId = '';
-  clearInterval(pollInterval);
-}
-
-// ── History ────────────────────────────────────────────────────────────────
-async function loadHistory() {
-  try {
-    const res = await fetch('/api/history');
-    const history = await res.json();
-    const list = document.getElementById('history-list');
-    if (!history.length) {
-      list.innerHTML = '<div style="font-size:.82rem;color:var(--muted)">Todavía no hay videos generados.</div>';
-      return;
-    }
-    list.innerHTML = history.map(job => `
-      <div class="history-item">
-        <div class="hist-dot ${job.status}"></div>
-        <div class="hist-info">
-          <div class="hist-model">${job.model} · ${job.duration}s · ${job.resolution}</div>
-          <div class="hist-prompt">${job.prompt}</div>
-          ${job.video_url ? `<a class="hist-link" href="${job.video_url}" target="_blank">Ver video →</a>` : ''}
-        </div>
-        <span class="hist-cost">$${job.cost_estimate}</span>
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  list.innerHTML = histItems.slice(0, 8).map((h, i) => `
+    <div class="hist-item">
+      <div class="hist-dot ok"></div>
+      <div class="hist-info" style="flex:1;min-width:0">
+        <div class="hist-cat">${h.cat} · ${h.model}${h.scaled ? ' <span style="background:rgba(34,197,94,.2);border:1px solid rgba(34,197,94,.4);color:#4ade80;font-size:.65rem;padding:.1rem .35rem;border-radius:4px;font-weight:600">📹 1080p</span>' : ''}</div>
+        <div class="hist-prompt" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px">${h.prompt || '—'}</div>
       </div>
-    `).join('');
-  } catch { /* ignore */ }
+      <div style="display:flex;align-items:center;gap:.4rem;flex-shrink:0">
+        <div class="hist-cost">$${h.cost}</div>
+        <button onclick="replicateFromHistory(${i})" style="background:rgba(123,63,203,.25);border:1px solid rgba(123,63,203,.5);color:var(--accent);font-size:.7rem;padding:.2rem .5rem;border-radius:6px;cursor:pointer;font-family:inherit">🔁</button>
+      </div>
+    </div>
+  `).join('');
 }
-
-function openHistory() {
-  document.getElementById('history-section').scrollIntoView({ behavior: 'smooth' });
+function replicateCurrent(tab) {
+  // just scroll to top of tab and highlight prompt so user can edit
+  const promptEl = document.querySelector('#tab-' + tab + ' .prompt');
+  if (promptEl) { promptEl.focus(); promptEl.select(); promptEl.scrollIntoView({ behavior:'smooth', block:'center' }); }
 }
-
-// ── Modal ──────────────────────────────────────────────────────────────────
-function openModal() {
-  document.getElementById('modal').classList.add('open');
-}
-function closeModal() {
-  document.getElementById('modal').classList.remove('open');
-}
-document.getElementById('modal').addEventListener('click', e => {
-  if (e.target === e.currentTarget) closeModal();
-});
-
-// ── Drag & drop ────────────────────────────────────────────────────────────
-document.querySelectorAll('.drop-zone').forEach(zone => {
-  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
-  zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
-  zone.addEventListener('drop', e => {
-    e.preventDefault();
-    zone.classList.remove('drag');
-    const file = e.dataTransfer.files[0];
-    if (!file) return;
-    const input = zone.querySelector('input[type=file]');
-    if (input) {
-      const dt = new DataTransfer();
-      dt.items.add(file);
-      input.files = dt.files;
-      input.dispatchEvent(new Event('change'));
+function replicateFromHistory(idx) {
+  const h = histItems[idx];
+  if (!h || !h.tab) return;
+  // switch to the right tab
+  const tabBtn = document.querySelector(`.cat-tab[data-tab="${h.tab}"]`);
+  if (tabBtn) switchTab(h.tab, tabBtn);
+  // restore model
+  setTimeout(() => {
+    const sel = document.querySelector(`#tab-${h.tab} select`);
+    if (sel && h.modelKey) { sel.value = h.modelKey; selModels[h.tab] = h.modelKey; updateCost(h.tab); renderModels(h.tab); }
+    // restore prompt
+    const promptEl = document.querySelector(`#tab-${h.tab} .prompt`);
+    if (promptEl && h.prompt) { promptEl.value = h.prompt; promptEl.focus(); promptEl.scrollIntoView({ behavior:'smooth', block:'center' }); }
+    // restore duration
+    if (h.dur) {
+      const slider = document.querySelector(`#tab-${h.tab} input[type=range]`);
+      if (slider) { slider.value = h.dur; setDur(h.tab, h.dur); updateCost(h.tab); }
     }
+  }, 80);
+}
+function downloadOutput(tab) {
+  const vid = document.getElementById(tab + '-output-video');
+  const src = vid ? vid.src : '';
+  if (src) {
+    navigator.clipboard.writeText(src).then(() => {
+      alert('URL del video copiada al portapapeles. En la app real el video se descarga directamente.');
+    }).catch(() => {
+      alert('URL del video: ' + src);
+    });
+  } else {
+    alert('En la app real, el video generado se descarga directamente desde Siray.');
+  }
+}
+function mockUpscale(tab) {
+  const btn = document.getElementById('rh-btn-' + tab);
+  const pg = document.getElementById('rh-progress-' + tab);
+  const msg = document.getElementById('rh-msg-' + tab);
+  const result = document.getElementById('rh-result-' + tab);
+  if (!btn || !pg) return;
+  btn.disabled = true; btn.textContent = '⏳ Escalando...';
+  pg.style.display = ''; result.style.display = 'none';
+  const steps = ['Subiendo video a RunningHub...', 'En cola de procesamiento...', 'Escalando a 1080p (x4)...', 'Mejorando detalles...', 'Finalizando...'];
+  let s = 0;
+  const iv = setInterval(() => {
+    if (s < steps.length) { msg.textContent = steps[s++]; }
+  }, 1400);
+  setTimeout(() => {
+    clearInterval(iv);
+    pg.style.display = 'none';
+    result.style.display = '';
+    btn.style.display = 'none';
+    // update history: mark last matching entry as scaled
+    const hi = histItems.findIndex(h => h.tab === tab);
+    if (hi !== -1) {
+      histItems[hi].scaled = true;
+      renderHistory();
+    }
+  }, 7500);
+}
+function downloadAllImages() {
+  const imgs = document.querySelectorAll('#img-grid img');
+  if (!imgs.length) { alert('En la app real, las imágenes generadas se descargan desde el servidor.'); return; }
+  imgs.forEach((img, i) => {
+    try {
+      navigator.clipboard.writeText(img.src);
+    } catch(e) {}
   });
-});
+  alert('URLs de imágenes copiadas. En la app real se descargan directamente.');
+}
 
+// ── Size chips ────────────────────────────────────────────────────────────────
+function selectSize(el, size) {
+  imgSelSize = size;
+  document.querySelectorAll('.size-chip').forEach(c => c.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+// ── Voice ─────────────────────────────────────────────────────────────────────
+function selVoice(el) {
+  document.querySelectorAll('.voice-chip').forEach(c => c.classList.remove('sel'));
+  el.classList.add('sel');
+}
+function mockElCheck() {
+  document.getElementById('el-status').innerHTML = '<span style="color:var(--green)">✓ Conectado · 9.842 chars restantes este mes</span>';
+}
+
+// ── API mock ──────────────────────────────────────────────────────────────────
+function mockSave(svc) {
+  if (svc === 'siray') {
+    const v = document.getElementById('siray-key').value;
+    if (!v) return;
+    try { localStorage.setItem('siray_key_demo', v); } catch {}
+    showSirayStatus(v);
+  } else if (svc === 'rh') {
+    const k = document.getElementById('rh-key').value;
+    const wf = document.getElementById('rh-workflow').value;
+    if (!k) return;
+    try { localStorage.setItem('rh_key_demo', k); localStorage.setItem('rh_workflow_demo', wf); } catch {}
+    showRhStatus(k, wf);
+  } else {
+    document.getElementById('el-status-sidebar').innerHTML = '<span style="color:var(--green)">✓ ElevenLabs conectado</span>';
+    document.getElementById('key-badge').innerHTML = '<span class="dot"></span> Conectado';
+  }
+}
+function showSirayStatus(k) {
+  const m = k.slice(0,6) + '...' + k.slice(-4);
+  document.getElementById('siray-status').innerHTML = `<span class="ok">✓ Clave guardada: ${m}</span> · Saldo: <span class="bal">$10.00</span> <span style="color:var(--muted);font-size:.72rem">(demo)</span>`;
+  document.getElementById('key-badge').innerHTML = '<span class="dot"></span> Siray OK';
+}
+function showRhStatus(k, wf) {
+  const m = k.slice(0,6) + '...' + k.slice(-4);
+  const wfLabel = wf ? ` · Workflow: <strong>${wf.slice(0,12)}${wf.length>12?'…':''}</strong>` : '';
+  document.getElementById('rh-status').innerHTML = `<span class="ok">✓ RunningHub OK: ${m}</span>${wfLabel}`;
+  // show upscale buttons on video outputs
+  ['reels','ugc'].forEach(tab => {
+    const btn = document.getElementById('rh-btn-' + tab);
+    if (btn) btn.style.display = '';
+  });
+}
+function showApiModal() { document.getElementById('api-card').scrollIntoView({ behavior:'smooth' }); }
+
+function resetOutput(tab) {
+  const o = document.getElementById(tab + '-output');
+  if (o) o.style.display = 'none';
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
 init();
 </script>
-</body>
-</html>
