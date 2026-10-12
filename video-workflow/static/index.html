@@ -1,4 +1,4 @@
-<title>Video Workflow · Generación IA</title>
+<title>GenRocket · Generación IA</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <style>
 :root {
@@ -51,13 +51,10 @@ body { background: var(--bg); color: var(--text); font-family: 'Inter', -apple-s
 }
 .logo { display: flex; align-items: center; gap: .55rem; }
 .logo-mark {
-  width: 30px; height: 30px;
-  background: linear-gradient(135deg, var(--purple), var(--accent));
-  border-radius: 8px;
+  width: 36px; height: 36px;
   display: flex; align-items: center; justify-content: center;
-  font-size: .95rem;
-  box-shadow: 0 0 14px rgba(240,200,0,.3);
 }
+.logo-mark img { width: 36px; height: 36px; object-fit: contain; }
 .logo-text { font-size: 1rem; font-weight: 800; letter-spacing: -.3px; }
 .logo-text span { color: var(--accent); }
 .header-right { display: flex; align-items: center; gap: .5rem; }
@@ -447,8 +444,8 @@ textarea.prompt:focus { border-color: var(--accent); }
 <!-- ── Header ── -->
 <header class="header">
   <div class="logo">
-    <div class="logo-mark">🎬</div>
-    <div class="logo-text">Video <span>Workflow</span></div>
+    <div class="logo-mark"><img src="/static/genrocket-logo.png" alt="GenRocket" /></div>
+    <div class="logo-text">Gen<span>Rocket</span></div>
   </div>
   <div class="header-right">
     <div class="api-badge" id="key-badge">
