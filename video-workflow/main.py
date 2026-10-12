@@ -71,6 +71,17 @@ MODELS = {
         "resolution": ["720p"],
         "needs_image": True,
     },
+    "wan3-ref2v": {
+        "id": "alibaba/wan-3.0-ref2v",
+        "name": "Wan 3.0 Ref2V",
+        "badge": "VIDEO REF",
+        "description": "Generá video animando desde un video de referencia. Ideal para clonar movimientos.",
+        "max_duration": 15,
+        "price_per_sec": 0.040,
+        "resolution": ["480p", "720p"],
+        "needs_image": True,
+        "needs_ref_video": True,
+    },
 }
 
 UPSCALE_PRICE_PER_SEC = 0.0072  # fal.ai ByteDance upscaler 1080p/30fps
@@ -78,17 +89,17 @@ UPSCALE_PRICE_PER_SEC = 0.0072  # fal.ai ByteDance upscaler 1080p/30fps
 
 # ─── API de Siray ───────────────────────────────────────────────────────────
 
-async def siray_generate(api_key: str, model_id: str, image_url: str, prompt: str, duration: int, resolution: str) -> dict:
+async def siray_generate(api_key: str, model_id: str, image_url: str, prompt: str, duration: int, resolution: str, ref_video_url: Optional[str] = None) -> dict:
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-    payload = {
-        "model": model_id,
-        "input": {
-            "image": image_url,
-            "prompt": prompt,
-            "duration": duration,
-            "resolution": resolution,
-        }
+    input_payload: dict = {
+        "image": image_url,
+        "prompt": prompt,
+        "duration": duration,
+        "resolution": resolution,
     }
+    if ref_video_url:
+        input_payload["reference_video"] = ref_video_url
+    payload = {"model": model_id, "input": input_payload}
     async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.post("https://api.siray.ai/v1/video/generate", headers=headers, json=payload)
         if resp.status_code != 200:
@@ -180,6 +191,15 @@ async def upload_image(file: UploadFile = File(...)):
     return {"path": f"/uploads/{filename}", "filename": filename}
 
 
+@app.post("/api/upload-video")
+async def upload_video(file: UploadFile = File(...)):
+    ext = Path(file.filename).suffix or ".mp4"
+    filename = f"{uuid.uuid4()}{ext}"
+    dest = UPLOADS_DIR / filename
+    dest.write_bytes(await file.read())
+    return {"path": f"/uploads/{filename}", "filename": filename}
+
+
 @app.post("/api/generate")
 async def generate(
     api_key: str = Form(...),
@@ -188,7 +208,10 @@ async def generate(
     prompt: str = Form(...),
     duration: int = Form(10),
     resolution: str = Form("480p"),
+    ref_video_filename: str = Form(""),
 ):
+    import base64
+
     model = MODELS.get(model_key)
     if not model:
         raise HTTPException(status_code=400, detail="Modelo no encontrado")
@@ -197,17 +220,22 @@ async def generate(
     if not image_path.exists():
         raise HTTPException(status_code=400, detail="Imagen no encontrada")
 
-    # Build public URL for image (Siray needs a URL, not a file upload)
-    # For local dev we use a base64 data URL
-    import base64
     img_bytes = image_path.read_bytes()
     suffix = image_path.suffix.lstrip(".")
     mime = f"image/{suffix}" if suffix in ("jpg", "jpeg", "png", "webp") else "image/jpeg"
-    image_b64 = base64.b64encode(img_bytes).decode()
-    image_data_url = f"data:{mime};base64,{image_b64}"
+    image_data_url = f"data:{mime};base64,{base64.b64encode(img_bytes).decode()}"
+
+    ref_video_data_url: Optional[str] = None
+    if ref_video_filename and model.get("needs_ref_video"):
+        ref_path = UPLOADS_DIR / ref_video_filename
+        if ref_path.exists():
+            vid_bytes = ref_path.read_bytes()
+            vid_suffix = ref_path.suffix.lstrip(".")
+            vid_mime = f"video/{vid_suffix}" if vid_suffix in ("mp4", "webm", "mov") else "video/mp4"
+            ref_video_data_url = f"data:{vid_mime};base64,{base64.b64encode(vid_bytes).decode()}"
 
     try:
-        result = await siray_generate(api_key, model["id"], image_data_url, prompt, duration, resolution)
+        result = await siray_generate(api_key, model["id"], image_data_url, prompt, duration, resolution, ref_video_data_url)
     except HTTPException:
         raise
     except Exception as e:

@@ -184,11 +184,20 @@
           <span class="label">Imagen del avatar</span>
           <span class="sub">JPG, PNG, WEBP</span>
         </div>
+        <div class="drop-zone" id="drop-ref-video" onclick="document.getElementById('ref-video').click()" style="min-height:120px;display:none">
+          <input type="file" id="ref-video" accept="video/*" onchange="handleRefVideoUpload(this)" />
+          <span class="icon">🎬</span>
+          <span class="label" style="font-size:.72rem">Video de<br>referencia</span>
+          <span class="sub">MP4, MOV</span>
+        </div>
         <div class="drop-zone" id="drop-model-img" onclick="document.getElementById('ref-image').click()" style="min-height:120px">
           <input type="file" id="ref-image" accept="image/*" onchange="handleRefImage(this)" />
           <span class="icon">👤</span>
           <span class="label" style="font-size:.72rem">Ref. adicional<br>(opcional)</span>
         </div>
+      </div>
+      <div id="ref2v-billing-note" style="display:none;font-size:.75rem;color:var(--amber);background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);border-radius:8px;padding:.5rem .75rem;margin-bottom:.75rem">
+        ⚠️ <strong>Billing ref2v:</strong> se cobra duración del video de entrada + duración de salida (ej: 5s ref + 15s output = 20s facturados).
       </div>
 
       <div class="prompt-wrap">
@@ -298,6 +307,7 @@
 let apiKey = localStorage.getItem('siray_api_key') || '';
 let selectedModel = 'wan3-i2v';
 let uploadedImageFilename = '';
+let uploadedRefVideoFilename = '';
 let currentTaskId = '';
 let pollInterval = null;
 let models = {};
@@ -361,6 +371,11 @@ function selectModel(key) {
   const res = document.getElementById('resolution');
   const current = res.value;
   res.innerHTML = m.resolution.map(r => `<option value="${r}"${r===current?' selected':''}>${r}${r==='480p'?' (más barato)':''}</option>`).join('');
+  // Show/hide ref video zone and billing note
+  const needsRef = m.needs_ref_video === true;
+  document.getElementById('drop-ref-video').style.display = needsRef ? '' : 'none';
+  document.getElementById('drop-model-img').style.display = needsRef ? 'none' : '';
+  document.getElementById('ref2v-billing-note').style.display = needsRef ? '' : 'none';
   updateCost();
 }
 
@@ -429,6 +444,26 @@ async function handleRefImage(input) {
   reader.readAsDataURL(file);
 }
 
+async function handleRefVideoUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const fd = new FormData();
+  fd.append('file', file);
+  const dz = document.getElementById('drop-ref-video');
+  dz.querySelector('.label').textContent = 'Subiendo...';
+  try {
+    const res = await fetch('/api/upload-video', { method: 'POST', body: fd });
+    const data = await res.json();
+    uploadedRefVideoFilename = data.filename;
+    dz.querySelector('.label').textContent = file.name.slice(0, 20);
+    dz.querySelector('.icon').textContent = '✅';
+    dz.querySelector('.sub').textContent = (file.size / 1024 / 1024).toFixed(1) + ' MB';
+  } catch (e) {
+    dz.querySelector('.label').textContent = 'Error al subir';
+    alert('Error subiendo video: ' + e.message);
+  }
+}
+
 // ── Duration ───────────────────────────────────────────────────────────────
 function updateDuration(val) {
   document.getElementById('dur-val').textContent = val + 's';
@@ -467,6 +502,8 @@ async function generateVideo() {
   if (!uploadedImageFilename) { alert('Subí una imagen del avatar primero.'); return; }
   const prompt = document.getElementById('prompt').value.trim();
   if (!prompt) { alert('Escribí un prompt describiendo el movimiento.'); return; }
+  const m = models[selectedModel];
+  if (m && m.needs_ref_video && !uploadedRefVideoFilename) { alert('Este modelo requiere un video de referencia.'); return; }
 
   const btn = document.getElementById('btn-generate');
   btn.disabled = true;
@@ -482,6 +519,7 @@ async function generateVideo() {
   fd.append('prompt', prompt);
   fd.append('duration', document.getElementById('duration').value);
   fd.append('resolution', document.getElementById('resolution').value);
+  if (uploadedRefVideoFilename) fd.append('ref_video_filename', uploadedRefVideoFilename);
 
   try {
     const res = await fetch('/api/generate', { method: 'POST', body: fd });
