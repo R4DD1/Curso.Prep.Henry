@@ -816,7 +816,8 @@ textarea.prompt:focus { border-color: var(--accent); }
         <button class="btn-primary" onclick="mockSave('rh')">Guardar</button>
       </div>
       <div style="margin-bottom:.5rem">
-        <input type="text" class="api-input" id="rh-workflow" placeholder="ID del workflow de escalado" style="width:100%;font-size:.8rem" />
+        <input type="text" class="api-input" id="rh-workflow" placeholder="ID del workflow de escalado" style="width:100%;font-size:.8rem" value="2109479700715646977" />
+        <div style="font-size:.7rem;color:var(--muted);margin-top:.25rem">✅ Workflow ganador pre-configurado · podés cambiarlo</div>
       </div>
       <div class="api-status" id="rh-status">Sin clave · <a href="https://runninghub.ai" target="_blank" style="color:var(--accent)">runninghub.ai</a></div>
     </div>
@@ -926,10 +927,10 @@ function init() {
   } catch {}
   try {
     const rk = localStorage.getItem('rh_key_demo');
-    const rwf = localStorage.getItem('rh_workflow_demo') || '';
+    const rwf = localStorage.getItem('rh_workflow_demo') || '2109479700715646977';
+    document.getElementById('rh-workflow').value = rwf;
     if (rk) {
       document.getElementById('rh-key').value = rk;
-      document.getElementById('rh-workflow').value = rwf;
       showRhStatus(rk, rwf);
     }
   } catch {}
