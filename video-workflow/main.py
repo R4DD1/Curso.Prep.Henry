@@ -161,6 +161,71 @@ MODELS = {
 
 UPSCALE_PRICE_PER_SEC = 0.0072  # fal.ai ByteDance upscaler 1080p/30fps
 
+RH_BASE = "https://www.runninghub.ai"
+RH_UPSCALE_WORKFLOW_NODE = [{"nodeId": "16", "fieldName": "video"}]
+
+
+# ─── API de RunningHub ──────────────────────────────────────────────────────
+
+async def rh_upload_url(rh_key: str, video_url: str) -> str:
+    """Download video from URL and upload to RunningHub. Returns fileName."""
+    async with httpx.AsyncClient(timeout=120) as client:
+        dl = await client.get(video_url)
+        if dl.status_code != 200:
+            raise HTTPException(status_code=400, detail="No se pudo descargar el video para escalar")
+        video_bytes = dl.content
+
+    async with httpx.AsyncClient(timeout=120) as client:
+        resp = await client.post(
+            f"{RH_BASE}/task/openapi/upload",
+            headers={"apikey": rh_key},
+            files={"file": ("video.mp4", video_bytes, "video/mp4")},
+        )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=resp.status_code, detail=f"RH upload: {resp.text}")
+        data = resp.json()
+        # API returns {"code":0,"data":{"fileName":"api/..."}}
+        file_name = (data.get("data") or {}).get("fileName") or data.get("fileName")
+        if not file_name:
+            raise HTTPException(status_code=500, detail=f"RH upload sin fileName: {data}")
+        return file_name
+
+
+async def rh_create_task(rh_key: str, workflow_id: str, file_name: str) -> str:
+    """Submit workflow task to RunningHub. Returns taskId."""
+    payload = {
+        "workflowId": workflow_id,
+        "nodeInfoList": [
+            {"nodeId": "16", "fieldName": "video", "fieldValue": file_name}
+        ],
+    }
+    async with httpx.AsyncClient(timeout=30) as client:
+        resp = await client.post(
+            f"{RH_BASE}/task/openapi/create",
+            headers={"apikey": rh_key, "Content-Type": "application/json"},
+            json=payload,
+        )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=resp.status_code, detail=f"RH create: {resp.text}")
+        data = resp.json()
+        task_id = (data.get("data") or {}).get("taskId") or data.get("taskId")
+        if not task_id:
+            raise HTTPException(status_code=500, detail=f"RH create sin taskId: {data}")
+        return task_id
+
+
+async def rh_get_outputs(rh_key: str, task_id: str) -> dict:
+    """Poll RunningHub task outputs."""
+    async with httpx.AsyncClient(timeout=15) as client:
+        resp = await client.get(
+            f"{RH_BASE}/task/openapi/outputs",
+            headers={"apikey": rh_key},
+            params={"taskId": task_id},
+        )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=resp.status_code, detail=f"RH outputs: {resp.text}")
+        return resp.json()
+
 
 # ─── API de Siray ───────────────────────────────────────────────────────────
 
@@ -360,6 +425,41 @@ async def task_status(task_id: str, api_key: str):
 @app.get("/api/history")
 async def get_history():
     return load_history()
+
+
+@app.post("/api/upscale")
+async def upscale_video(
+    rh_api_key: str = Form(...),
+    rh_workflow_id: str = Form(...),
+    video_url: str = Form(...),
+):
+    try:
+        file_name = await rh_upload_url(rh_api_key, video_url)
+        task_id = await rh_create_task(rh_api_key, rh_workflow_id, file_name)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    return {"task_id": task_id, "status": "processing"}
+
+
+@app.get("/api/upscale-status/{task_id}")
+async def upscale_status(task_id: str, rh_api_key: str):
+    try:
+        result = await rh_get_outputs(rh_api_key, task_id)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    data = result.get("data") or {}
+    status = data.get("status") or result.get("status", "unknown")
+    outputs = data.get("outputs") or result.get("outputs") or []
+    video_url = None
+    if outputs:
+        item = outputs[0]
+        video_url = item.get("fileUrl") or item.get("url") or item.get("videoUrl")
+    return {"status": status, "video_url": video_url, "raw": result}
 
 
 @app.get("/uploads/{filename}")

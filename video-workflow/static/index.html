@@ -1086,41 +1086,116 @@ document.addEventListener('change', function(e) {
 });
 
 // ── Mock generation ───────────────────────────────────────────────────────────
-function mockGenerate(tab) {
+async function mockGenerate(tab) {
+  const sirayKey = localStorage.getItem('siray_key_demo');
+  if (!sirayKey) { alert('Guardá tu clave de Siray AI primero.'); return; }
+
+  const tabEl = document.getElementById('tab-' + tab);
+  const imageInput = tabEl.querySelector('.drop-zone:first-of-type input[type=file]');
+  if (!imageInput || !imageInput.files || !imageInput.files[0]) {
+    alert('Seleccioná una imagen de avatar primero.'); return;
+  }
+
   const pg = document.getElementById(tab + '-progress');
   const fill = document.getElementById(tab + '-pfill');
   const msg = document.getElementById(tab + '-pmsg');
   const output = document.getElementById(tab + '-output');
   pg.style.display = ''; output.style.display = 'none';
-  const msgs = ['Enviando a Siray AI...', 'En cola...', 'Generando frames...', 'Procesando...', 'Casi listo...'];
-  let pct = 5, step = 0;
-  const iv = setInterval(() => {
-    pct = Math.min(pct + (Math.random() * 8 + 3), 95);
-    fill.style.width = pct + '%';
-    if (step < msgs.length) msg.textContent = msgs[step++];
-  }, 900);
-  setTimeout(() => {
-    clearInterval(iv);
-    fill.style.width = '100%';
-    msg.textContent = '✓ Completado';
-    setTimeout(() => {
-      pg.style.display = 'none';
-      output.style.display = 'block';
-      addHistory(tab);
-      // show RH upscale button if key is set
-      try {
-        const rhk = localStorage.getItem('rh_key_demo');
-        const rhBtn = document.getElementById('rh-btn-' + tab);
-        if (rhk && rhBtn) {
-          rhBtn.style.display = '';
-          rhBtn.disabled = false;
-          rhBtn.textContent = '⬆️ Escalar con RunningHub';
-          document.getElementById('rh-progress-' + tab).style.display = 'none';
-          document.getElementById('rh-result-' + tab).style.display = 'none';
-        }
-      } catch {}
-    }, 600);
-  }, 8500);
+  fill.style.width = '5%'; msg.textContent = 'Subiendo imagen...';
+
+  try {
+    // 1. Upload image
+    const formImg = new FormData();
+    formImg.append('file', imageInput.files[0]);
+    const upResp = await fetch('/api/upload-image', { method:'POST', body: formImg });
+    if (!upResp.ok) throw new Error('Error subiendo imagen: ' + (await upResp.text()));
+    const { filename } = await upResp.json();
+
+    fill.style.width = '15%'; msg.textContent = 'Enviando a Siray AI...';
+
+    // 2. Submit generation
+    const modelKey = selModels[tab];
+    const m = CATS[tab].models[modelKey];
+    const durEl = document.getElementById(tab + '-dur-val');
+    const dur = durEl ? parseInt(durEl.textContent) || 10 : 10;
+    const resEl = tabEl.querySelector('select');
+    const resolution = resEl ? resEl.value : '480p';
+
+    // ref video (Ref2V)
+    let refVideoFilename = '';
+    const refVidZone = document.getElementById(tab + '-ref-video-zone');
+    if (refVidZone && refVidZone.style.display !== 'none') {
+      const refVidInput = refVidZone.querySelector('input[type=file]');
+      if (refVidInput && refVidInput.files && refVidInput.files[0]) {
+        const rfForm = new FormData();
+        rfForm.append('file', refVidInput.files[0]);
+        const rfResp = await fetch('/api/upload-video', { method:'POST', body: rfForm });
+        if (rfResp.ok) { const rfData = await rfResp.json(); refVideoFilename = rfData.filename || ''; }
+      }
+    }
+
+    const promptEl = tabEl.querySelector('.prompt');
+    const prompt = promptEl ? promptEl.value : '';
+
+    const genForm = new FormData();
+    genForm.append('api_key', sirayKey);
+    genForm.append('model_key', modelKey);
+    genForm.append('image_filename', filename);
+    genForm.append('prompt', prompt);
+    genForm.append('duration', dur);
+    genForm.append('resolution', resolution);
+    if (refVideoFilename) genForm.append('ref_video_filename', refVideoFilename);
+
+    const genResp = await fetch('/api/generate', { method:'POST', body: genForm });
+    if (!genResp.ok) throw new Error('Error generando: ' + (await genResp.text()));
+    const { task_id } = await genResp.json();
+
+    fill.style.width = '25%'; msg.textContent = 'En cola de Siray AI...';
+
+    // 3. Poll status
+    let videoUrl = null;
+    const pollMsgs = ['Generando frames...', 'Procesando movimiento...', 'Renderizando...', 'Casi listo...'];
+    let pollStep = 0;
+    for (let attempt = 0; attempt < 180; attempt++) {
+      await new Promise(r => setTimeout(r, 3000));
+      const stResp = await fetch(`/api/status/${task_id}?api_key=${encodeURIComponent(sirayKey)}`);
+      if (!stResp.ok) continue;
+      const st = await stResp.json();
+      const pct = Math.min(25 + attempt * 1.2, 92);
+      fill.style.width = pct + '%';
+      if (pollStep < pollMsgs.length) msg.textContent = pollMsgs[Math.floor(pollStep++)];
+      if (st.status === 'completed' && st.video_url) { videoUrl = st.video_url; break; }
+      if (st.status === 'failed') throw new Error('Generación fallida en Siray AI');
+    }
+    if (!videoUrl) throw new Error('Tiempo de espera agotado');
+
+    fill.style.width = '100%'; msg.textContent = '✓ Completado';
+    await new Promise(r => setTimeout(r, 400));
+    pg.style.display = 'none';
+    output.style.display = 'block';
+
+    const vid = document.getElementById(tab + '-output-video');
+    if (vid) { vid.src = videoUrl; vid.load(); }
+
+    addHistory(tab, videoUrl);
+
+    // show RH upscale button if key is set
+    try {
+      const rhk = localStorage.getItem('rh_key_demo');
+      const rhBtn = document.getElementById('rh-btn-' + tab);
+      if (rhk && rhBtn) {
+        rhBtn.style.display = '';
+        rhBtn.disabled = false;
+        rhBtn.textContent = '⬆️ Escalar con RunningHub';
+        document.getElementById('rh-progress-' + tab).style.display = 'none';
+        document.getElementById('rh-result-' + tab).style.display = 'none';
+      }
+    } catch {}
+
+  } catch(err) {
+    pg.style.display = 'none';
+    alert('Error: ' + err.message);
+  }
 }
 
 function mockGenerateImg() {
@@ -1173,14 +1248,14 @@ function mockTTS() {
 // ── History ───────────────────────────────────────────────────────────────────
 let histItems = [];
 const catLabels = { reels:'Reels', ugc:'UGC', images:'Imagen', voice:'Voz' };
-function addHistory(tab) {
+function addHistory(tab, videoUrl) {
   const m = CATS[tab].models[selModels[tab]];
   const durEl = document.getElementById(tab + '-dur-val');
   const dur = durEl ? parseInt(durEl.textContent) || 10 : 10;
   const promptEl = document.querySelector('#tab-' + tab + ' .prompt');
   const prompt = promptEl ? promptEl.value : '';
   const price = tab === 'images' ? (m ? m.price : 0.003) : tab === 'voice' ? 0.018 : (m ? m.price * dur : 0.40);
-  histItems.unshift({ tab, cat: catLabels[tab], model: m ? m.name : 'ElevenLabs', modelKey: selModels[tab], cost: price.toFixed(3), prompt, dur });
+  histItems.unshift({ tab, cat: catLabels[tab], model: m ? m.name : 'ElevenLabs', modelKey: selModels[tab], cost: price.toFixed(3), prompt, dur, video_url: videoUrl || null });
   renderHistory();
 }
 function renderHistory() {
@@ -1237,31 +1312,73 @@ function downloadOutput(tab) {
     alert('En la app real, el video generado se descarga directamente desde Siray.');
   }
 }
-function mockUpscale(tab) {
+async function mockUpscale(tab) {
   const btn = document.getElementById('rh-btn-' + tab);
   const pg = document.getElementById('rh-progress-' + tab);
   const msg = document.getElementById('rh-msg-' + tab);
   const result = document.getElementById('rh-result-' + tab);
   if (!btn || !pg) return;
+
+  const rhKey = localStorage.getItem('rh_key_demo');
+  const rhWorkflow = localStorage.getItem('rh_workflow_demo') || '2109479700715646977';
+  if (!rhKey) { alert('Guardá tu clave de RunningHub primero.'); return; }
+
+  // Get video URL from most recent matching history item or from the video element
+  const vidEl = document.getElementById(tab + '-output-video');
+  const hi = histItems.findIndex(h => h.tab === tab);
+  const videoUrl = (hi !== -1 && histItems[hi].video_url) ? histItems[hi].video_url : (vidEl ? vidEl.src : '');
+  if (!videoUrl) { alert('No hay video generado para escalar.'); return; }
+
   btn.disabled = true; btn.textContent = '⏳ Escalando...';
   pg.style.display = ''; result.style.display = 'none';
+
   const steps = ['Subiendo video a RunningHub...', 'En cola de procesamiento...', 'Escalando a 1080p (x4)...', 'Mejorando detalles...', 'Finalizando...'];
   let s = 0;
-  const iv = setInterval(() => {
-    if (s < steps.length) { msg.textContent = steps[s++]; }
-  }, 1400);
-  setTimeout(() => {
+  const iv = setInterval(() => { if (s < steps.length) msg.textContent = steps[s++]; }, 3000);
+
+  try {
+    // Submit upscale job
+    const form = new FormData();
+    form.append('rh_api_key', rhKey);
+    form.append('rh_workflow_id', rhWorkflow);
+    form.append('video_url', videoUrl);
+    const subResp = await fetch('/api/upscale', { method:'POST', body: form });
+    if (!subResp.ok) throw new Error('RH submit: ' + (await subResp.text()));
+    const { task_id } = await subResp.json();
+
+    // Poll for result
+    let scaledUrl = null;
+    for (let attempt = 0; attempt < 120; attempt++) {
+      await new Promise(r => setTimeout(r, 4000));
+      const stResp = await fetch(`/api/upscale-status/${task_id}?rh_api_key=${encodeURIComponent(rhKey)}`);
+      if (!stResp.ok) continue;
+      const st = await stResp.json();
+      if (st.status === 'completed' && st.video_url) { scaledUrl = st.video_url; break; }
+      if (st.status === 'failed') throw new Error('RunningHub reportó falla en el escalado');
+    }
+    if (!scaledUrl) throw new Error('Tiempo de espera agotado en RunningHub');
+
     clearInterval(iv);
     pg.style.display = 'none';
     result.style.display = '';
     btn.style.display = 'none';
-    // update history: mark last matching entry as scaled
-    const hi = histItems.findIndex(h => h.tab === tab);
-    if (hi !== -1) {
-      histItems[hi].scaled = true;
-      renderHistory();
-    }
-  }, 7500);
+
+    // Show download link
+    const linkEl = document.getElementById('rh-result-link-' + tab);
+    if (linkEl) linkEl.innerHTML = `<a href="${scaledUrl}" target="_blank" style="color:#4ade80;font-weight:600">⬇ Descargar 1080p</a>`;
+
+    // Update video element to scaled version
+    if (vidEl) { vidEl.src = scaledUrl; vidEl.load(); }
+
+    // Mark history
+    if (hi !== -1) { histItems[hi].scaled = true; histItems[hi].video_url = scaledUrl; renderHistory(); }
+
+  } catch(err) {
+    clearInterval(iv);
+    pg.style.display = 'none';
+    btn.disabled = false; btn.textContent = '⬆️ Escalar con RunningHub';
+    alert('Error escalando: ' + err.message);
+  }
 }
 function downloadAllImages() {
   const imgs = document.querySelectorAll('#img-grid img');
@@ -1308,10 +1425,19 @@ function mockSave(svc) {
     document.getElementById('key-badge').innerHTML = '<span class="dot"></span> Conectado';
   }
 }
-function showSirayStatus(k) {
+async function showSirayStatus(k) {
   const m = k.slice(0,6) + '...' + k.slice(-4);
-  document.getElementById('siray-status').innerHTML = `<span class="ok">✓ Clave guardada: ${m}</span> · Saldo: <span class="bal">$10.00</span> <span style="color:var(--muted);font-size:.72rem">(demo)</span>`;
+  document.getElementById('siray-status').innerHTML = `<span class="ok">✓ Clave guardada: ${m}</span> · Saldo: <span class="bal">...</span>`;
   document.getElementById('key-badge').innerHTML = '<span class="dot"></span> Siray OK';
+  try {
+    const fd = new FormData(); fd.append('api_key', k);
+    const r = await fetch('/api/balance', { method:'POST', body: fd });
+    if (r.ok) {
+      const d = await r.json();
+      const bal = d.balance >= 0 ? '$' + d.balance.toFixed(3) : 'error';
+      document.getElementById('siray-status').innerHTML = `<span class="ok">✓ Clave guardada: ${m}</span> · Saldo: <span class="bal">${bal}</span>`;
+    }
+  } catch {}
 }
 function showRhStatus(k, wf) {
   const m = k.slice(0,6) + '...' + k.slice(-4);
