@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Video Workflow · Generación IA</title>
+  <style>
+    /* ── Reset & base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0a0a0a;
+      --bg2: #141414;
+      --bg3: #1e1e1e;
+      --border: #2a2a2a;
+      --pink: #e91e8c;
+      --pink-glow: rgba(233,30,140,0.18);
+      --green: #22c55e;
+      --amber: #f59e0b;
+      --red: #ef4444;
+      --text: #f0f0f0;
+      --muted: #888;
+      --radius: 12px;
+    }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+
+    /* ── Layout ── */
+    header { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+    header h1 { font-size: 1.05rem; font-weight: 700; letter-spacing: -0.3px; }
+    header h1 span { color: var(--pink); }
+    .header-actions { display: flex; gap: .6rem; }
+    .btn-sm { background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: .35rem .85rem; border-radius: 8px; font-size: .8rem; cursor: pointer; transition: background .15s; }
+    .btn-sm:hover { background: #2a2a2a; }
+
+    main { display: grid; grid-template-columns: 1fr 380px; gap: 1.5rem; max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
+    @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+
+    /* ── Card ── */
+    .card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; }
+    .card-label { font-size: .65rem; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--pink); margin-bottom: .5rem; }
+    .card-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem; }
+
+    /* ── API Key banner ── */
+    #api-banner { margin-bottom: 1.5rem; }
+    .api-row { display: flex; gap: .5rem; }
+    .api-row input { flex: 1; background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: .55rem .9rem; border-radius: 8px; font-size: .88rem; outline: none; }
+    .api-row input:focus { border-color: var(--pink); }
+    .btn-pink { background: var(--pink); border: none; color: #fff; padding: .55rem 1.2rem; border-radius: 8px; font-size: .88rem; font-weight: 600; cursor: pointer; transition: opacity .15s; white-space: nowrap; }
+    .btn-pink:hover { opacity: .88; }
+    .btn-pink:disabled { opacity: .45; cursor: default; }
+    .api-status { margin-top: .55rem; font-size: .82rem; color: var(--muted); }
+    .api-status .ok { color: var(--green); }
+    .api-status .bal { color: var(--pink); font-weight: 600; }
+
+    /* ── Upload zones ── */
+    .upload-grid { display: grid; grid-template-columns: 1fr 180px; gap: .75rem; margin-bottom: 1rem; }
+    .drop-zone { border: 2px dashed var(--border); border-radius: var(--radius); min-height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .5rem; cursor: pointer; transition: border-color .2s, background .2s; position: relative; overflow: hidden; }
+    .drop-zone:hover, .drop-zone.drag { border-color: var(--pink); background: var(--pink-glow); }
+    .drop-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .drop-zone .icon { font-size: 1.8rem; }
+    .drop-zone .label { font-size: .8rem; color: var(--muted); text-align: center; }
+    .drop-zone .sub { font-size: .7rem; color: #555; }
+    .drop-zone img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: calc(var(--radius) - 2px); }
+
+    /* ── Prompt ── */
+    .prompt-wrap { margin-bottom: 1rem; }
+    .prompt-wrap label { font-size: .8rem; color: var(--muted); display: block; margin-bottom: .35rem; }
+    .prompt-wrap textarea { width: 100%; background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: .65rem .9rem; border-radius: 8px; font-size: .88rem; resize: vertical; min-height: 70px; outline: none; font-family: inherit; }
+    .prompt-wrap textarea:focus { border-color: var(--pink); }
+
+    /* ── Duration & resolution ── */
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; margin-bottom: 1rem; }
+    .field label { font-size: .78rem; color: var(--muted); display: block; margin-bottom: .3rem; }
+    .field select, .field input[type=range] { width: 100%; }
+    .field select { background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: .5rem .75rem; border-radius: 8px; font-size: .88rem; outline: none; cursor: pointer; }
+    .field select:focus { border-color: var(--pink); }
+    .range-row { display: flex; align-items: center; gap: .6rem; }
+    .range-row input[type=range] { accent-color: var(--pink); flex: 1; }
+    .range-val { font-size: .85rem; font-weight: 600; color: var(--pink); min-width: 28px; text-align: right; }
+
+    /* ── Upscale toggle ── */
+    .toggle-row { display: flex; align-items: center; gap: .75rem; margin-bottom: 1rem; padding: .7rem 1rem; background: var(--bg3); border-radius: 8px; border: 1px solid var(--border); cursor: pointer; }
+    .toggle-row input[type=checkbox] { accent-color: var(--pink); width: 16px; height: 16px; cursor: pointer; }
+    .toggle-row .tl { flex: 1; }
+    .toggle-row .tl strong { font-size: .88rem; display: block; }
+    .toggle-row .tl span { font-size: .75rem; color: var(--muted); }
+    .toggle-row .price-tag { font-size: .78rem; color: var(--pink); font-weight: 600; }
+
+    /* ── Cost estimate ── */
+    .cost-box { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: .75rem 1rem; margin-bottom: 1rem; }
+    .cost-row { display: flex; justify-content: space-between; font-size: .82rem; color: var(--muted); }
+    .cost-row + .cost-row { margin-top: .3rem; }
+    .cost-row.total { color: var(--text); font-weight: 700; margin-top: .5rem; padding-top: .5rem; border-top: 1px solid var(--border); font-size: .9rem; }
+    .cost-row.total span:last-child { color: var(--pink); }
+
+    /* ── Generate button ── */
+    #btn-generate { width: 100%; padding: .8rem; font-size: 1rem; border-radius: 10px; }
+
+    /* ── Right panel: model selector ── */
+    .model-list { display: flex; flex-direction: column; gap: .6rem; margin-bottom: 1rem; }
+    .model-card { border: 2px solid var(--border); border-radius: 10px; padding: .85rem 1rem; cursor: pointer; transition: border-color .15s, background .15s; }
+    .model-card:hover { border-color: #444; }
+    .model-card.selected { border-color: var(--pink); background: var(--pink-glow); }
+    .model-card-header { display: flex; align-items: center; gap: .5rem; margin-bottom: .25rem; }
+    .model-card-header strong { font-size: .9rem; }
+    .badge { font-size: .6rem; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; background: var(--pink); color: #fff; padding: .15rem .45rem; border-radius: 4px; }
+    .badge.new { background: var(--pink); }
+    .max-dur { font-size: .7rem; color: var(--muted); margin-left: auto; }
+    .model-desc { font-size: .75rem; color: var(--muted); }
+    .model-price { font-size: .73rem; color: var(--pink); margin-top: .3rem; font-weight: 600; }
+
+    /* ── Progress / status ── */
+    #progress-section { margin-top: 1.5rem; }
+    .progress-bar-wrap { height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; margin: .6rem 0; }
+    .progress-bar { height: 100%; background: var(--pink); border-radius: 3px; width: 0%; transition: width .4s; }
+    .status-text { font-size: .82rem; color: var(--muted); }
+    .status-text .pulse { color: var(--pink); animation: pulse 1.2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    /* ── Video output ── */
+    #video-output { margin-top: 1rem; display: none; }
+    #video-output video { width: 100%; border-radius: var(--radius); }
+    .output-actions { display: flex; gap: .5rem; margin-top: .6rem; }
+
+    /* ── History ── */
+    #history-section { margin-top: 1.5rem; }
+    .history-list { display: flex; flex-direction: column; gap: .6rem; max-height: 340px; overflow-y: auto; }
+    .history-item { display: flex; gap: .75rem; align-items: center; background: var(--bg3); border-radius: 8px; padding: .65rem .85rem; font-size: .8rem; }
+    .hist-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .hist-dot.completed { background: var(--green); }
+    .hist-dot.processing { background: var(--amber); }
+    .hist-dot.failed { background: var(--red); }
+    .hist-info { flex: 1; min-width: 0; }
+    .hist-model { font-weight: 600; }
+    .hist-prompt { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hist-cost { color: var(--pink); font-weight: 600; flex-shrink: 0; }
+    .hist-link { color: var(--pink); text-decoration: none; font-size: .75rem; }
+    .hist-link:hover { text-decoration: underline; }
+
+    /* ── Modal ── */
+    #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 100; align-items: center; justify-content: center; }
+    #modal.open { display: flex; }
+    .modal-box { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; width: 92%; max-width: 420px; }
+    .modal-box h3 { margin-bottom: 1rem; }
+    .modal-box p { font-size: .88rem; color: var(--muted); margin-bottom: 1.2rem; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: .5rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Video <span>Workflow</span> · Generación IA</h1>
+  <div class="header-actions">
+    <button class="btn-sm" onclick="openHistory()">Historial</button>
+    <button class="btn-sm" onclick="openModal('help')">?</button>
+  </div>
+</header>
+
+<main>
+  <!-- ── LEFT COLUMN ── -->
+  <div>
+
+    <!-- API Key -->
+    <div class="card" id="api-banner">
+      <div class="card-label">Paso previo</div>
+      <div class="card-title">Conectá tu clave API de Siray</div>
+      <div class="api-row">
+        <input type="password" id="api-key-input" placeholder="sk_..." autocomplete="off" />
+        <button class="btn-pink" onclick="saveApiKey()">Guardar clave</button>
+      </div>
+      <div class="api-status" id="api-status">
+        Sin clave guardada — <a href="https://console.siray.ai" target="_blank" style="color:var(--pink)">Obtené una en siray.ai</a>
+      </div>
+    </div>
+
+    <!-- Inputs -->
+    <div class="card" style="margin-bottom:1.5rem">
+      <div class="card-label">Inputs</div>
+      <div class="card-title">Imagen del avatar + prompt</div>
+
+      <div class="upload-grid">
+        <div class="drop-zone" id="drop-video" onclick="document.getElementById('input-image').click()">
+          <input type="file" id="input-image" accept="image/*" onchange="handleImageUpload(this)" />
+          <span class="icon">🖼️</span>
+          <span class="label">Imagen del avatar</span>
+          <span class="sub">JPG, PNG, WEBP</span>
+        </div>
+        <div class="drop-zone" id="drop-model-img" onclick="document.getElementById('ref-image').click()" style="min-height:120px">
+          <input type="file" id="ref-image" accept="image/*" onchange="handleRefImage(this)" />
+          <span class="icon">👤</span>
+          <span class="label" style="font-size:.72rem">Ref. adicional<br>(opcional)</span>
+        </div>
+      </div>
+
+      <div class="prompt-wrap">
+        <label>Descripción del movimiento / acción</label>
+        <textarea id="prompt" placeholder="Una mujer camina sonriente en un parque, movimientos naturales, luz del sol..."></textarea>
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label>Duración: <span id="dur-label">10s</span></label>
+          <div class="range-row">
+            <input type="range" id="duration" min="5" max="15" value="10" step="1" oninput="updateDuration(this.value)" />
+            <span class="range-val" id="dur-val">10s</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>Resolución de salida</label>
+          <select id="resolution" onchange="updateCost()">
+            <option value="480p">480p (más barato)</option>
+            <option value="720p">720p</option>
+          </select>
+        </div>
+      </div>
+
+      <label class="toggle-row" for="upscale-check">
+        <input type="checkbox" id="upscale-check" onchange="updateCost()" />
+        <div class="tl">
+          <strong>✨ Escalar a 1080p (fal.ai ByteDance)</strong>
+          <span>+~$0.108 por 15s · calidad final mucho mejor</span>
+        </div>
+        <span class="price-tag" id="upscale-price-tag">+$0.11</span>
+      </label>
+
+      <!-- Cost estimate -->
+      <div class="cost-box">
+        <div class="cost-row"><span>Generación (<span id="cost-model-name">Wan 3.0</span>)</span><span id="cost-gen">$0.40</span></div>
+        <div class="cost-row" id="cost-upscale-row" style="display:none"><span>Escalado 1080p</span><span id="cost-up">$0.11</span></div>
+        <div class="cost-row total"><span>Total estimado</span><span id="cost-total">$0.40</span></div>
+      </div>
+
+      <button class="btn-pink" id="btn-generate" onclick="generateVideo()">Crear video</button>
+
+      <!-- Progress -->
+      <div id="progress-section" style="display:none">
+        <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+        <div class="status-text"><span class="pulse">●</span> <span id="status-msg">Iniciando generación...</span></div>
+      </div>
+
+      <!-- Video output -->
+      <div id="video-output">
+        <video id="output-video" controls loop playsinline></video>
+        <div class="output-actions">
+          <a id="download-btn" class="btn-pink" style="text-decoration:none;padding:.5rem 1rem;font-size:.85rem" download>⬇ Descargar</a>
+          <button class="btn-sm" onclick="resetForm()">Nueva generación</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div class="card" id="history-section">
+      <div class="card-label">Historial local</div>
+      <div class="card-title" style="margin-bottom:.75rem">Resultados recientes</div>
+      <div class="history-list" id="history-list">
+        <div style="font-size:.82rem;color:var(--muted)">Todavía no hay videos generados.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── RIGHT COLUMN ── -->
+  <div>
+    <div class="card">
+      <div class="card-label">Motor manual</div>
+      <div class="card-title">Sin ambigüedad</div>
+      <div class="model-list" id="model-list"></div>
+
+      <div style="font-size:.75rem;color:var(--muted);margin-top:.5rem">
+        <strong style="color:var(--text)">Calidad y precio</strong><br>
+        Elegí un motor para ver las calidades disponibles y el costo estimado.
+        <br><br>
+        ✅ Wan 3.0 + escalado = <strong style="color:var(--pink)">~$0.71 / clip 15s</strong>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Modal de ayuda -->
+<div id="modal">
+  <div class="modal-box">
+    <h3>Cómo usar Video Workflow</h3>
+    <p>
+      1. Pegá tu API key de <a href="https://console.siray.ai" target="_blank" style="color:var(--pink)">Siray</a> arriba y guardala.<br><br>
+      2. Subí la imagen de tu avatar.<br><br>
+      3. Escribí un prompt describiendo el movimiento.<br><br>
+      4. Elegí el motor (Wan 3.0 recomendado) y la duración.<br><br>
+      5. Activá el escalado a 1080p si querés calidad final.<br><br>
+      6. Hacé click en <strong>Crear video</strong>.
+    </p>
+    <div class="modal-actions">
+      <button class="btn-pink" onclick="closeModal()">Entendido</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let apiKey = localStorage.getItem('siray_api_key') || '';
+let selectedModel = 'wan3-i2v';
+let uploadedImageFilename = '';
+let currentTaskId = '';
+let pollInterval = null;
+let models = {};
+
+// ── Init ───────────────────────────────────────────────────────────────────
+async function init() {
+  if (apiKey) {
+    document.getElementById('api-key-input').value = apiKey;
+    await verifyAndShowBalance();
+  }
+  await loadModels();
+  loadHistory();
+}
+
+async function loadModels() {
+  try {
+    const res = await fetch('/api/models');
+    models = await res.json();
+    renderModels();
+  } catch (e) {
+    console.error('Error cargando modelos', e);
+  }
+}
+
+function renderModels() {
+  const list = document.getElementById('model-list');
+  list.innerHTML = '';
+  for (const [key, m] of Object.entries(models)) {
+    const el = document.createElement('div');
+    el.className = 'model-card' + (key === selectedModel ? ' selected' : '');
+    el.onclick = () => selectModel(key);
+    el.innerHTML = `
+      <div class="model-card-header">
+        <strong>${m.name}</strong>
+        ${m.badge ? `<span class="badge new">${m.badge}</span>` : ''}
+        <span class="max-dur">max ${m.max_duration}s</span>
+      </div>
+      <div class="model-desc">${m.description}</div>
+      <div class="model-price">$${m.price_per_sec.toFixed(3)}/s · ${m.resolution.join(', ')}</div>
+    `;
+    list.appendChild(el);
+  }
+  updateCost();
+}
+
+function selectModel(key) {
+  selectedModel = key;
+  document.querySelectorAll('.model-card').forEach((el, i) => {
+    const k = Object.keys(models)[i];
+    el.classList.toggle('selected', k === key);
+  });
+  const m = models[key];
+  // Adjust duration max
+  const dur = document.getElementById('duration');
+  dur.max = m.max_duration;
+  if (parseInt(dur.value) > m.max_duration) {
+    dur.value = m.max_duration;
+    updateDuration(m.max_duration);
+  }
+  // Adjust resolution options
+  const res = document.getElementById('resolution');
+  const current = res.value;
+  res.innerHTML = m.resolution.map(r => `<option value="${r}"${r===current?' selected':''}>${r}${r==='480p'?' (más barato)':''}</option>`).join('');
+  updateCost();
+}
+
+// ── API Key ────────────────────────────────────────────────────────────────
+async function saveApiKey() {
+  const val = document.getElementById('api-key-input').value.trim();
+  if (!val) return;
+  apiKey = val;
+  localStorage.setItem('siray_api_key', val);
+  await verifyAndShowBalance();
+}
+
+async function verifyAndShowBalance() {
+  const el = document.getElementById('api-status');
+  el.innerHTML = '<span class="pulse" style="color:var(--pink)">●</span> Verificando...';
+  try {
+    const fd = new FormData();
+    fd.append('api_key', apiKey);
+    const res = await fetch('/api/balance', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.balance >= 0) {
+      const masked = apiKey.slice(0, 6) + '...' + apiKey.slice(-4);
+      el.innerHTML = `<span class="ok">✓ Clave guardada: ${masked}</span> · Saldo: <span class="bal">$${data.balance.toFixed(2)}</span>`;
+    } else {
+      el.innerHTML = '<span style="color:var(--red)">✗ Clave inválida o no se pudo verificar</span>';
+    }
+  } catch {
+    el.innerHTML = '<span style="color:var(--amber)">⚠ No se pudo verificar el saldo (clave guardada igual)</span>';
+  }
+}
+
+// ── Image upload ───────────────────────────────────────────────────────────
+async function handleImageUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    const res = await fetch('/api/upload-image', { method: 'POST', body: fd });
+    const data = await res.json();
+    uploadedImageFilename = data.filename;
+    // Show preview
+    const dz = document.getElementById('drop-video');
+    const img = document.createElement('img');
+    img.src = data.path;
+    const existing = dz.querySelector('img');
+    if (existing) existing.remove();
+    dz.appendChild(img);
+  } catch (e) {
+    alert('Error subiendo imagen: ' + e.message);
+  }
+}
+
+async function handleRefImage(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const dz = document.getElementById('drop-model-img');
+    const img = document.createElement('img');
+    img.src = e.target.result;
+    const existing = dz.querySelector('img');
+    if (existing) existing.remove();
+    dz.appendChild(img);
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── Duration ───────────────────────────────────────────────────────────────
+function updateDuration(val) {
+  document.getElementById('dur-val').textContent = val + 's';
+  document.getElementById('dur-label').textContent = val + 's';
+  updateCost();
+}
+
+// ── Cost estimate ──────────────────────────────────────────────────────────
+async function updateCost() {
+  const m = models[selectedModel];
+  if (!m) return;
+  const dur = parseInt(document.getElementById('duration').value) || 10;
+  const upscale = document.getElementById('upscale-check').checked;
+
+  const genCost = (m.price_per_sec * dur).toFixed(3);
+  const upCost = upscale ? (0.0072 * dur).toFixed(3) : 0;
+  const total = (parseFloat(genCost) + parseFloat(upCost)).toFixed(3);
+
+  document.getElementById('cost-model-name').textContent = m.name;
+  document.getElementById('cost-gen').textContent = '$' + genCost;
+  document.getElementById('cost-total').textContent = '$' + total;
+  document.getElementById('upscale-price-tag').textContent = '+$' + (0.0072 * dur).toFixed(3);
+
+  const upRow = document.getElementById('cost-upscale-row');
+  if (upscale) {
+    upRow.style.display = '';
+    document.getElementById('cost-up').textContent = '$' + upCost;
+  } else {
+    upRow.style.display = 'none';
+  }
+}
+
+// ── Generate ───────────────────────────────────────────────────────────────
+async function generateVideo() {
+  if (!apiKey) { alert('Primero guardá tu API key de Siray.'); return; }
+  if (!uploadedImageFilename) { alert('Subí una imagen del avatar primero.'); return; }
+  const prompt = document.getElementById('prompt').value.trim();
+  if (!prompt) { alert('Escribí un prompt describiendo el movimiento.'); return; }
+
+  const btn = document.getElementById('btn-generate');
+  btn.disabled = true;
+  btn.textContent = 'Generando...';
+  document.getElementById('progress-section').style.display = '';
+  document.getElementById('video-output').style.display = 'none';
+  setProgress(10, 'Enviando solicitud a Siray...');
+
+  const fd = new FormData();
+  fd.append('api_key', apiKey);
+  fd.append('model_key', selectedModel);
+  fd.append('image_filename', uploadedImageFilename);
+  fd.append('prompt', prompt);
+  fd.append('duration', document.getElementById('duration').value);
+  fd.append('resolution', document.getElementById('resolution').value);
+
+  try {
+    const res = await fetch('/api/generate', { method: 'POST', body: fd });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Error del servidor');
+    }
+    const data = await res.json();
+    currentTaskId = data.task_id;
+    setProgress(25, 'Generando video... esto tarda 1–3 minutos');
+    startPolling();
+    loadHistory();
+  } catch (e) {
+    setProgress(0, '');
+    document.getElementById('progress-section').style.display = 'none';
+    btn.disabled = false;
+    btn.textContent = 'Crear video';
+    alert('Error: ' + e.message);
+  }
+}
+
+function startPolling() {
+  clearInterval(pollInterval);
+  let progress = 30;
+  pollInterval = setInterval(async () => {
+    try {
+      const res = await fetch(`/api/status/${currentTaskId}?api_key=${encodeURIComponent(apiKey)}`);
+      const data = await res.json();
+
+      if (data.status === 'completed' && data.video_url) {
+        clearInterval(pollInterval);
+        setProgress(100, 'Video listo ✓');
+        setTimeout(() => showVideo(data.video_url), 300);
+        loadHistory();
+      } else if (data.status === 'failed') {
+        clearInterval(pollInterval);
+        setProgress(0, '');
+        document.getElementById('progress-section').style.display = 'none';
+        alert('La generación falló. Revisá los logs del servidor.');
+        resetBtn();
+      } else {
+        progress = Math.min(progress + 4, 88);
+        setProgress(progress, 'Procesando en Siray... ' + (data.status || ''));
+      }
+    } catch { /* seguir intentando */ }
+  }, 4000);
+}
+
+function setProgress(pct, msg) {
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('status-msg').textContent = msg;
+}
+
+function showVideo(url) {
+  const vid = document.getElementById('output-video');
+  vid.src = url;
+  const dl = document.getElementById('download-btn');
+  dl.href = url;
+  document.getElementById('video-output').style.display = '';
+  document.getElementById('progress-section').style.display = 'none';
+  resetBtn();
+}
+
+function resetBtn() {
+  const btn = document.getElementById('btn-generate');
+  btn.disabled = false;
+  btn.textContent = 'Crear video';
+}
+
+function resetForm() {
+  document.getElementById('video-output').style.display = 'none';
+  document.getElementById('progress-section').style.display = 'none';
+  currentTaskId = '';
+  clearInterval(pollInterval);
+}
+
+// ── History ────────────────────────────────────────────────────────────────
+async function loadHistory() {
+  try {
+    const res = await fetch('/api/history');
+    const history = await res.json();
+    const list = document.getElementById('history-list');
+    if (!history.length) {
+      list.innerHTML = '<div style="font-size:.82rem;color:var(--muted)">Todavía no hay videos generados.</div>';
+      return;
+    }
+    list.innerHTML = history.map(job => `
+      <div class="history-item">
+        <div class="hist-dot ${job.status}"></div>
+        <div class="hist-info">
+          <div class="hist-model">${job.model} · ${job.duration}s · ${job.resolution}</div>
+          <div class="hist-prompt">${job.prompt}</div>
+          ${job.video_url ? `<a class="hist-link" href="${job.video_url}" target="_blank">Ver video →</a>` : ''}
+        </div>
+        <span class="hist-cost">$${job.cost_estimate}</span>
+      </div>
+    `).join('');
+  } catch { /* ignore */ }
+}
+
+function openHistory() {
+  document.getElementById('history-section').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ── Modal ──────────────────────────────────────────────────────────────────
+function openModal() {
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+}
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+
+// ── Drag & drop ────────────────────────────────────────────────────────────
+document.querySelectorAll('.drop-zone').forEach(zone => {
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('drag');
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    const input = zone.querySelector('input[type=file]');
+    if (input) {
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      input.files = dt.files;
+      input.dispatchEvent(new Event('change'));
+    }
+  });
+});
+
+init();
+</script>
+</body>
+</html>
