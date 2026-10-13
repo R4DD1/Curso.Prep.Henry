@@ -1073,6 +1073,7 @@ function init() {
     }
   } catch {}
   renderModels('reels');
+  loadHistoryFromBackend();
 }
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
@@ -1286,6 +1287,7 @@ async function mockGenerate(tab) {
     genForm.append('duration', dur);
     genForm.append('resolution', resolution);
     genForm.append('aspect_ratio', aspect_ratio);
+    genForm.append('tab', tab);
     if (refVideoFilename) genForm.append('ref_video_filename', refVideoFilename);
 
     const genResp = await fetch('/api/generate', { method:'POST', body: genForm });
@@ -1529,7 +1531,7 @@ async function mockTTS() {
     audioEl.onended = () => { document.getElementById('voice-play-btn').textContent = '▶'; };
 
     const dlBtn = document.getElementById('voice-dl-btn');
-    dlBtn.onclick = () => { const a = document.createElement('a'); a.href = audio_url; a.download = 'voice.mp3'; a.click(); };
+    dlBtn.onclick = () => _downloadUrl(audio_url, 'voice.mp3');
 
     addHistory('voice');
   } catch(e) {
@@ -1553,19 +1555,54 @@ function addHistory(tab, videoUrl) {
 }
 function renderHistory() {
   const list = document.getElementById('history-list');
-  list.innerHTML = histItems.slice(0, 8).map((h, i) => `
+  if (!histItems.length) {
+    list.innerHTML = '<div style="font-size:.8rem;color:var(--muted)">Todavía no hay generaciones.</div>';
+    return;
+  }
+  const btnBase = 'font-size:.7rem;padding:.2rem .5rem;border-radius:6px;cursor:pointer;font-family:inherit;border:1px solid';
+  list.innerHTML = histItems.slice(0, 10).map((h, i) => `
     <div class="hist-item">
       <div class="hist-dot ok"></div>
       <div class="hist-info" style="flex:1;min-width:0">
         <div class="hist-cat">${h.cat} · ${h.model}${h.scaled ? ' <span style="background:rgba(34,197,94,.2);border:1px solid rgba(34,197,94,.4);color:#4ade80;font-size:.65rem;padding:.1rem .35rem;border-radius:4px;font-weight:600">📹 1080p</span>' : ''}</div>
-        <div class="hist-prompt" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px">${h.prompt || '—'}</div>
+        <div class="hist-prompt" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px">${h.prompt || '—'}</div>
       </div>
       <div style="display:flex;align-items:center;gap:.4rem;flex-shrink:0">
         <div class="hist-cost">$${h.cost}</div>
-        <button onclick="replicateFromHistory(${i})" style="background:rgba(123,63,203,.25);border:1px solid rgba(123,63,203,.5);color:var(--accent);font-size:.7rem;padding:.2rem .5rem;border-radius:6px;cursor:pointer;font-family:inherit">🔁</button>
+        ${h.video_url ? `<button onclick="downloadFromHistory(${i})" title="Descargar" style="${btnBase} rgba(34,197,94,.5);background:rgba(34,197,94,.15);color:#4ade80">⬇</button>` : ''}
+        <button onclick="replicateFromHistory(${i})" style="${btnBase} rgba(123,63,203,.5);background:rgba(123,63,203,.25);color:var(--accent)">🔁</button>
       </div>
     </div>
   `).join('');
+}
+function downloadFromHistory(idx) {
+  const h = histItems[idx];
+  if (!h || !h.video_url) return;
+  const ext = h.cat === 'Voz' ? 'mp3' : 'mp4';
+  _downloadUrl(h.video_url, `${h.cat || 'archivo'}_${idx + 1}.${ext}`);
+}
+async function loadHistoryFromBackend() {
+  try {
+    const resp = await fetch('/api/history');
+    if (!resp.ok) return;
+    const items = await resp.json();
+    if (!items.length || histItems.length > 0) return;
+    const catMap = { reels: 'Reels', ugc: 'UGC', images: 'Imagen', voice: 'Voz' };
+    histItems = items
+      .filter(h => h.video_url)
+      .map(h => ({
+        tab: h.tab || 'reels',
+        cat: catMap[h.tab] || 'Reels',
+        model: h.model || 'Siray',
+        modelKey: h.model_key || '',
+        cost: h.cost_estimate != null ? Number(h.cost_estimate).toFixed(3) : '0.000',
+        prompt: h.prompt || '',
+        dur: h.duration || 10,
+        video_url: h.video_url,
+        scaled: false,
+      }));
+    renderHistory();
+  } catch(e) {}
 }
 function replicateCurrent(tab) {
   // just scroll to top of tab and highlight prompt so user can edit
@@ -1592,18 +1629,23 @@ function replicateFromHistory(idx) {
     }
   }, 80);
 }
+function _downloadUrl(src, defaultName) {
+  if (!src) return;
+  const fname = src.split('/').pop().split('?')[0] || defaultName;
+  const a = document.createElement('a');
+  const isCrossOrigin = src.startsWith('http') && !src.includes(location.hostname);
+  a.href = isCrossOrigin ? `/api/download?url=${encodeURIComponent(src)}&filename=${encodeURIComponent(fname)}` : src;
+  a.download = fname;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
 function downloadOutput(tab) {
   const vid = document.getElementById(tab + '-output-video');
   const src = vid ? vid.src : '';
-  if (src) {
-    navigator.clipboard.writeText(src).then(() => {
-      alert('URL del video copiada al portapapeles. En la app real el video se descarga directamente.');
-    }).catch(() => {
-      alert('URL del video: ' + src);
-    });
-  } else {
-    alert('En la app real, el video generado se descarga directamente desde Siray.');
-  }
+  if (!src) { alert('No hay video generado todavía.'); return; }
+  _downloadUrl(src, 'video.mp4');
 }
 function onUgcAudioChange(input) {
   const nameEl = document.getElementById('ugc-audio-name');
@@ -1690,13 +1732,10 @@ async function mockUpscale(tab) {
 }
 function downloadAllImages() {
   const imgs = document.querySelectorAll('#img-grid img');
-  if (!imgs.length) { alert('En la app real, las imágenes generadas se descargan desde el servidor.'); return; }
+  if (!imgs.length) { alert('No hay imágenes generadas todavía.'); return; }
   imgs.forEach((img, i) => {
-    try {
-      navigator.clipboard.writeText(img.src);
-    } catch(e) {}
+    setTimeout(() => _downloadUrl(img.src, `imagen_${i + 1}.png`), i * 600);
   });
-  alert('URLs de imágenes copiadas. En la app real se descargan directamente.');
 }
 
 // ── Size chips ────────────────────────────────────────────────────────────────

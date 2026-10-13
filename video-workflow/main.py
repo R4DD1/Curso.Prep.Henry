@@ -17,7 +17,7 @@ from botocore.exceptions import BotoCoreError
 
 import httpx
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 app = FastAPI(title="Video Workflow")
@@ -365,9 +365,34 @@ async def rh_balance(api_key: str) -> float:
         return float(bal) if bal is not None else -1.0
 
 
-# ─── Historial local ────────────────────────────────────────────────────────
+# ─── Historial ──────────────────────────────────────────────────────────────
+
+def _r2_load_history() -> list | None:
+    client, bucket = _r2_client()
+    if not client:
+        return None
+    try:
+        resp = client.get_object(Bucket=bucket, Key="history.json")
+        return json.loads(resp["Body"].read())
+    except Exception:
+        return None
+
+
+def _r2_save_history(history: list):
+    client, bucket = _r2_client()
+    if not client:
+        return
+    try:
+        content = json.dumps(history, indent=2, ensure_ascii=False).encode()
+        client.put_object(Bucket=bucket, Key="history.json", Body=content, ContentType="application/json")
+    except Exception:
+        pass
+
 
 def load_history() -> list:
+    r2 = _r2_load_history()
+    if r2 is not None:
+        return r2
     try:
         return json.loads(HISTORY_FILE.read_text())
     except Exception:
@@ -376,6 +401,7 @@ def load_history() -> list:
 
 def save_history(history: list):
     HISTORY_FILE.write_text(json.dumps(history, indent=2, ensure_ascii=False))
+    _r2_save_history(history)
 
 
 def add_to_history(entry: dict):
@@ -513,6 +539,7 @@ async def generate(
     resolution: str = Form("480p"),
     ref_video_filename: str = Form(""),
     aspect_ratio: str = Form("9:16"),
+    tab: str = Form("reels"),
 ):
     import base64
 
@@ -550,6 +577,7 @@ async def generate(
     job = {
         "id": str(uuid.uuid4()),
         "task_id": task_id,
+        "tab": tab,
         "model": model["name"],
         "model_key": model_key,
         "prompt": prompt,
@@ -591,6 +619,26 @@ async def task_status(task_id: str, api_key: str):
 @app.get("/api/history")
 async def get_history():
     return load_history()
+
+
+@app.get("/api/download")
+async def download_file(url: str, filename: str = ""):
+    try:
+        async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as client:
+            resp = await client.get(url)
+        if resp.status_code >= 400:
+            raise HTTPException(status_code=resp.status_code, detail="No se pudo obtener el archivo")
+        fname = filename or url.split("/")[-1].split("?")[0] or "file"
+        ct = resp.headers.get("content-type", "application/octet-stream")
+        return Response(
+            content=resp.content,
+            media_type=ct,
+            headers={"Content-Disposition": f'attachment; filename="{fname}"'},
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/api/upscale")
