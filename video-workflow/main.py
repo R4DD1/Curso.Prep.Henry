@@ -659,6 +659,21 @@ async def save_video(video_url: str = Form(...)):
     return {"permanent_url": permanent_url, "filename": filename}
 
 
+@app.post("/api/save-image")
+async def save_image(image_url: str = Form(...)):
+    """Download image from Siray URL and upload to persistent storage."""
+    async with httpx.AsyncClient(timeout=60) as client:
+        resp = await client.get(image_url)
+        if resp.status_code != 200:
+            raise HTTPException(status_code=502, detail="No se pudo descargar la imagen")
+        image_bytes = resp.content
+        content_type = resp.headers.get("content-type", "image/png").split(";")[0]
+    ext = "jpg" if "jpeg" in content_type else content_type.split("/")[-1]
+    filename = f"image_{uuid.uuid4()}.{ext}"
+    permanent_url = await upload_to_storage(image_bytes, filename, content_type)
+    return {"permanent_url": permanent_url, "filename": filename}
+
+
 @app.post("/api/tts")
 async def text_to_speech(
     api_key: str = Form(...),

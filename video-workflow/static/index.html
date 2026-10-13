@@ -1424,8 +1424,18 @@ async function mockGenerateImg() {
 
       if (status === 'SUCCESS' || status === 'COMPLETED') {
         clearInterval(poll);
+        fill.style.width = '90%'; msg.textContent = 'Guardando imagen...';
+        let urls = data.outputs || (data.image_url ? [data.image_url] : []);
+        // Save each image to persistent storage
+        urls = await Promise.all(urls.map(async u => {
+          try {
+            const sf = new FormData(); sf.append('image_url', u);
+            const sr = await fetch('/api/save-image', { method: 'POST', body: sf });
+            if (sr.ok) { const sd = await sr.json(); return sd.permanent_url; }
+          } catch(e) {}
+          return u;
+        }));
         fill.style.width = '100%'; msg.textContent = '✓ Imagen generada';
-        const urls = data.outputs || (data.image_url ? [data.image_url] : []);
         setTimeout(() => {
           pg.style.display = 'none';
           grid.innerHTML = urls.map(u => `<img src="${u}" style="width:100%;border-radius:10px;cursor:pointer" onclick="window.open('${u}','_blank')" />`).join('');
