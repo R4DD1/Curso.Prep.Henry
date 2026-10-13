@@ -856,14 +856,14 @@ textarea.prompt:focus { border-color: var(--accent); }
           <div class="field">
             <label class="field-label">Estabilidad</label>
             <div class="range-row">
-              <input type="range" min="0" max="100" value="50" style="accent-color:var(--purple)" />
+              <input type="range" min="0" max="100" value="50" id="voice-stability" style="accent-color:var(--purple)" />
               <span class="range-val" style="color:var(--purple)">50</span>
             </div>
           </div>
           <div class="field">
             <label class="field-label">Claridad</label>
             <div class="range-row">
-              <input type="range" min="0" max="100" value="75" style="accent-color:var(--purple)" />
+              <input type="range" min="0" max="100" value="75" id="voice-similarity" style="accent-color:var(--purple)" />
               <span class="range-val" style="color:var(--purple)">75</span>
             </div>
           </div>
@@ -880,15 +880,16 @@ textarea.prompt:focus { border-color: var(--accent); }
           <div class="progress-label"><span class="dot-pulse">●</span><span id="voice-pmsg">Generando audio...</span></div>
         </div>
         <div class="output-area" id="voice-output" style="display:none">
+          <audio id="voice-audio" style="display:none"></audio>
           <div style="background:var(--bg3);border-radius:10px;padding:1rem;display:flex;align-items:center;gap:1rem">
-            <button onclick="this.textContent=this.textContent==='▶'?'⏸':'▶'" style="width:42px;height:42px;background:var(--accent);border:none;border-radius:50%;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#1a0d2e;font-weight:700;flex-shrink:0">▶</button>
+            <button id="voice-play-btn" onclick="toggleVoicePlay(this)" style="width:42px;height:42px;background:var(--accent);border:none;border-radius:50%;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#1a0d2e;font-weight:700;flex-shrink:0">▶</button>
             <div style="flex:1">
-              <div style="height:4px;background:var(--border2);border-radius:2px"><div style="height:100%;background:linear-gradient(90deg,var(--purple),var(--accent));border-radius:2px;width:0%;animation:voiceprog 3s ease forwards" id="voice-bar"></div></div>
+              <div style="height:4px;background:var(--border2);border-radius:2px"><div style="height:100%;background:linear-gradient(90deg,var(--purple),var(--accent));border-radius:2px;width:0%" id="voice-bar"></div></div>
               <div style="font-size:.72rem;color:var(--muted);margin-top:.35rem" id="voice-dur">0:00 / 0:00</div>
             </div>
           </div>
           <div class="output-actions">
-            <button class="btn-primary">⬇ Descargar MP3</button>
+            <button id="voice-dl-btn" class="btn-primary">⬇ Descargar MP3</button>
             <button class="btn-secondary" onclick="resetOutput('voice')">Nueva voz</button>
           </div>
         </div>
@@ -1412,29 +1413,87 @@ async function mockGenerateImg() {
   }, 3000);
 }
 
-function mockTTS() {
+const ELEVENLABS_VOICE_IDS = {
+  'Rachel': '21m00Tcm4TlvDq8ikWAM',
+  'Adam':   'pNInz6obpgDQGcFmaJgB',
+  'Bella':  'EXAVITQu4vr4xnSDxMaL',
+  'Antoni': 'ErXwobaYiN019PkySvjV',
+  'Elli':   'MF3mGyEYCl7XYWbV9V6O',
+  'Josh':   'TxGEqnHWrfWFTfGW9XjX',
+};
+
+function toggleVoicePlay(btn) {
+  const audio = document.getElementById('voice-audio');
+  if (!audio.src) return;
+  if (audio.paused) { audio.play(); btn.textContent = '⏸'; }
+  else { audio.pause(); btn.textContent = '▶'; }
+}
+
+async function mockTTS() {
+  const elKey = document.getElementById('el-api-key').value.trim();
+  if (!elKey) { alert('Ingresá tu API key de ElevenLabs'); return; }
+  const textEl = document.querySelector('#tab-voice .prompt');
+  const text = textEl ? textEl.value.trim() : '';
+  if (!text) { alert('Ingresá el texto a convertir'); return; }
+
+  const selChip = document.querySelector('#voice-grid .voice-chip.sel');
+  const voiceName = selChip ? selChip.querySelector('span > span:first-child').textContent.trim() : 'Rachel';
+  const stability = ((document.getElementById('voice-stability')?.value ?? 50)) / 100;
+  const similarity = ((document.getElementById('voice-similarity')?.value ?? 75)) / 100;
+
   const pg = document.getElementById('voice-progress');
   const fill = document.getElementById('voice-pfill');
   const msg = document.getElementById('voice-pmsg');
   const output = document.getElementById('voice-output');
   pg.style.display = ''; output.style.display = 'none';
-  let pct = 10;
-  const iv = setInterval(() => { pct = Math.min(pct + 20, 95); fill.style.width = pct + '%'; }, 300);
-  setTimeout(() => {
-    clearInterval(iv);
-    fill.style.width = '100%';
-    msg.textContent = '✓ Audio generado';
-    setTimeout(() => {
-      pg.style.display = 'none';
-      output.style.display = 'block';
-      document.getElementById('voice-bar').style.animation = 'none';
-      document.getElementById('voice-bar').style.width = '0%';
-      void document.getElementById('voice-bar').offsetHeight;
-      document.getElementById('voice-bar').style.animation = 'voiceprog 3s ease forwards';
-      document.getElementById('voice-dur').textContent = '0:00 / 0:24';
-      addHistory('voice');
-    }, 400);
-  }, 2000);
+  fill.style.width = '30%'; msg.textContent = 'Conectando con ElevenLabs...';
+
+  try {
+    const fd = new FormData();
+    fd.append('api_key', elKey);
+    fd.append('text', text);
+    fd.append('voice_name', voiceName);
+    fd.append('stability', stability);
+    fd.append('similarity_boost', similarity);
+
+    fill.style.width = '60%'; msg.textContent = 'Generando audio...';
+    const resp = await fetch('/api/tts', { method: 'POST', body: fd });
+    if (!resp.ok) throw new Error('ElevenLabs: ' + (await resp.text()));
+    const { audio_url } = await resp.json();
+
+    fill.style.width = '100%'; msg.textContent = '✓ Audio generado';
+    await new Promise(r => setTimeout(r, 400));
+    pg.style.display = 'none';
+    output.style.display = 'block';
+
+    const audioEl = document.getElementById('voice-audio');
+    audioEl.src = audio_url;
+    document.getElementById('voice-play-btn').textContent = '▶';
+    document.getElementById('voice-bar').style.width = '0%';
+
+    audioEl.onloadedmetadata = () => {
+      const d = audioEl.duration;
+      const m = Math.floor(d / 60), s = Math.floor(d % 60).toString().padStart(2, '0');
+      document.getElementById('voice-dur').textContent = `0:00 / ${m}:${s}`;
+    };
+    audioEl.ontimeupdate = () => {
+      if (!audioEl.duration) return;
+      const pct = (audioEl.currentTime / audioEl.duration) * 100;
+      document.getElementById('voice-bar').style.width = pct + '%';
+      const cur = audioEl.currentTime, tot = audioEl.duration;
+      const fmt = t => `${Math.floor(t/60)}:${Math.floor(t%60).toString().padStart(2,'0')}`;
+      document.getElementById('voice-dur').textContent = `${fmt(cur)} / ${fmt(tot)}`;
+    };
+    audioEl.onended = () => { document.getElementById('voice-play-btn').textContent = '▶'; };
+
+    const dlBtn = document.getElementById('voice-dl-btn');
+    dlBtn.onclick = () => { const a = document.createElement('a'); a.href = audio_url; a.download = 'voice.mp3'; a.click(); };
+
+    addHistory('voice');
+  } catch(e) {
+    pg.style.display = 'none';
+    alert('Error: ' + e.message);
+  }
 }
 
 // ── History ───────────────────────────────────────────────────────────────────

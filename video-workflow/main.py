@@ -599,6 +599,54 @@ async def serve_upload(filename: str):
     return FileResponse(path)
 
 
+ELEVENLABS_VOICE_IDS = {
+    "Rachel": "21m00Tcm4TlvDq8ikWAM",
+    "Adam":   "pNInz6obpgDQGcFmaJgB",
+    "Bella":  "EXAVITQu4vr4xnSDxMaL",
+    "Antoni": "ErXwobaYiN019PkySvjV",
+    "Elli":   "MF3mGyEYCl7XYWbV9V6O",
+    "Josh":   "TxGEqnHWrfWFTfGW9XjX",
+}
+
+
+@app.post("/api/tts")
+async def text_to_speech(
+    api_key: str = Form(...),
+    text: str = Form(...),
+    voice_name: str = Form("Rachel"),
+    stability: float = Form(0.5),
+    similarity_boost: float = Form(0.75),
+):
+    voice_id = ELEVENLABS_VOICE_IDS.get(voice_name, "21m00Tcm4TlvDq8ikWAM")
+    headers = {
+        "xi-api-key": api_key,
+        "Content-Type": "application/json",
+        "Accept": "audio/mpeg",
+    }
+    payload = {
+        "text": text,
+        "model_id": "eleven_multilingual_v2",
+        "voice_settings": {
+            "stability": stability,
+            "similarity_boost": similarity_boost,
+        },
+    }
+    async with httpx.AsyncClient(timeout=60) as client:
+        resp = await client.post(
+            f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
+            headers=headers,
+            json=payload,
+        )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=resp.status_code, detail=resp.text)
+        audio_bytes = resp.content
+
+    filename = f"tts_{uuid.uuid4()}.mp3"
+    dest = OUTPUTS_DIR / filename
+    dest.write_bytes(audio_bytes)
+    return {"audio_url": f"/outputs/{filename}", "filename": filename}
+
+
 @app.post("/api/generate-image")
 async def generate_image(
     api_key: str = Form(...),
