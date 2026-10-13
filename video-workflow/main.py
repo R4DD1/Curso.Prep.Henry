@@ -160,6 +160,19 @@ MODELS = {
     },
 }
 
+IMAGE_MODELS = {
+    "flux-schnell":      {"id": "black-forest-labs/flux-1.1-pro-t2i",       "name": "FLUX Schnell"},
+    "flux-dev":          {"id": "black-forest-labs/flux-1.1-pro-ultra-t2i",  "name": "FLUX Dev"},
+    "sdxl":              {"id": "bytedance/seedream-4.0-t2i",                "name": "SDXL 1.0"},
+    "nano-banana-2":     {"id": "google/nano-banana-2-t2i",                  "name": "Nano Banana 2"},
+    "nano-banana-21":    {"id": "google/nano-banana-2-lite-t2i",             "name": "Nano Banana 2.1"},
+    "grok-aurora":       {"id": "x-ai/grok-imagine-image-t2i",              "name": "Grok Aurora (xAI)"},
+    "dalle3":            {"id": "openai/gpt-image-2-t2i",                    "name": "DALL·E 3"},
+    "flux-schnell-spicy":{"id": "black-forest-labs/flux-1.1-pro-t2i",       "name": "FLUX Schnell Spicy"},
+    "flux-dev-spicy":    {"id": "black-forest-labs/flux-1.1-pro-ultra-t2i",  "name": "FLUX Dev Spicy"},
+    "pony-diffusion":    {"id": "bytedance/seedream-4.5-t2i-spicy",          "name": "Pony Diffusion XL"},
+}
+
 UPSCALE_PRICE_PER_SEC = 0.0072  # fal.ai ByteDance upscaler 1080p/30fps
 
 RH_BASE = "https://www.runninghub.ai"
@@ -253,6 +266,30 @@ async def siray_status(api_key: str, task_id: str) -> dict:
     headers = {"Authorization": f"Bearer {api_key}"}
     async with httpx.AsyncClient(timeout=15) as client:
         resp = await client.get(f"https://api.siray.ai/v1/video/generations/{task_id}", headers=headers)
+        if resp.status_code != 200:
+            raise HTTPException(status_code=resp.status_code, detail=resp.text)
+        return resp.json()
+
+
+async def siray_generate_image(api_key: str, model_id: str, prompt: str, size: str = "1:1", n: int = 1) -> dict:
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    payload: dict = {
+        "model": model_id,
+        "prompt": prompt,
+        "size": size,
+        "n": n,
+    }
+    async with httpx.AsyncClient(timeout=30) as client:
+        resp = await client.post("https://api.siray.ai/v1/images/generations/async", headers=headers, json=payload)
+        if resp.status_code != 200:
+            raise HTTPException(status_code=resp.status_code, detail=resp.text)
+        return resp.json()
+
+
+async def siray_image_status(api_key: str, task_id: str) -> dict:
+    headers = {"Authorization": f"Bearer {api_key}"}
+    async with httpx.AsyncClient(timeout=15) as client:
+        resp = await client.get(f"https://api.siray.ai/v1/images/generations/async/{task_id}", headers=headers)
         if resp.status_code != 200:
             raise HTTPException(status_code=resp.status_code, detail=resp.text)
         return resp.json()
@@ -560,6 +597,43 @@ async def serve_upload(filename: str):
     if not path.exists():
         raise HTTPException(status_code=404)
     return FileResponse(path)
+
+
+@app.post("/api/generate-image")
+async def generate_image(
+    api_key: str = Form(...),
+    model_key: str = Form(...),
+    prompt: str = Form(...),
+    size: str = Form("1:1"),
+    n: int = Form(1),
+):
+    model = IMAGE_MODELS.get(model_key)
+    if not model:
+        raise HTTPException(status_code=400, detail="Modelo de imagen no encontrado")
+    try:
+        result = await siray_generate_image(api_key, model["id"], prompt, size, n)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    task_id = (result.get("data") or {}).get("task_id") or result.get("task_id") or result.get("id", "")
+    return {"task_id": task_id, "status": "processing"}
+
+
+@app.get("/api/image-status/{task_id}")
+async def image_task_status(task_id: str, api_key: str):
+    try:
+        result = await siray_image_status(api_key, task_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    data = result.get("data") or {}
+    status = data.get("status", result.get("status", "unknown"))
+    outputs = data.get("outputs") or []
+    image_url = outputs[0] if outputs else None
+
+    return {"status": status, "image_url": image_url, "outputs": outputs, "raw": result}
 
 
 # Serve static files

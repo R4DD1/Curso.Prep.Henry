@@ -1340,26 +1340,75 @@ async function mockGenerate(tab) {
   }
 }
 
-function mockGenerateImg() {
+async function mockGenerateImg() {
+  const sirayKey = localStorage.getItem('siray_key_demo');
+  if (!sirayKey) { alert('Guardá tu clave de Siray AI primero.'); return; }
+
+  const tabEl = document.getElementById('tab-images');
+  const promptEl = tabEl.querySelector('textarea');
+  const prompt = promptEl ? promptEl.value.trim() : '';
+  if (!prompt) { alert('Escribí un prompt primero.'); return; }
+
+  const quantityEl = tabEl.querySelector('select');
+  const n = quantityEl ? parseInt(quantityEl.value) || 1 : 1;
+  const modelKey = selModels.images || 'flux-schnell';
+
   const pg = document.getElementById('img-progress');
   const fill = document.getElementById('img-pfill');
   const msg = document.getElementById('img-pmsg');
   const output = document.getElementById('img-output');
   const grid = document.getElementById('img-grid');
   pg.style.display = ''; output.style.display = 'none';
-  let pct = 5;
-  const iv = setInterval(() => { pct = Math.min(pct + 15, 95); fill.style.width = pct + '%'; }, 300);
-  setTimeout(() => {
-    clearInterval(iv);
-    fill.style.width = '100%';
-    msg.textContent = '✓ Imagen generada';
-    setTimeout(() => {
-      pg.style.display = 'none';
-      grid.innerHTML = `<div style="background:linear-gradient(135deg,var(--bg3),var(--bg4));border-radius:10px;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:2rem">🖼️</div>`;
-      output.style.display = 'block';
-      addHistory('images');
-    }, 400);
-  }, 2800);
+  fill.style.width = '10%'; msg.textContent = 'Enviando a Siray...';
+
+  const fd = new FormData();
+  fd.append('api_key', sirayKey);
+  fd.append('model_key', modelKey);
+  fd.append('prompt', prompt);
+  fd.append('size', imgSelSize || '1:1');
+  fd.append('n', n);
+
+  let taskId;
+  try {
+    const res = await fetch('/api/generate-image', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Error al generar imagen');
+    taskId = data.task_id;
+  } catch(e) {
+    pg.style.display = 'none';
+    alert('Error: ' + e.message);
+    return;
+  }
+
+  fill.style.width = '30%'; msg.textContent = 'Generando imagen...';
+
+  const poll = setInterval(async () => {
+    try {
+      const res = await fetch(`/api/image-status/${taskId}?api_key=${encodeURIComponent(sirayKey)}`);
+      const data = await res.json();
+      const status = (data.status || '').toUpperCase();
+
+      if (status === 'SUCCESS' || status === 'COMPLETED') {
+        clearInterval(poll);
+        fill.style.width = '100%'; msg.textContent = '✓ Imagen generada';
+        const urls = data.outputs || (data.image_url ? [data.image_url] : []);
+        setTimeout(() => {
+          pg.style.display = 'none';
+          grid.innerHTML = urls.map(u => `<img src="${u}" style="width:100%;border-radius:10px;cursor:pointer" onclick="window.open('${u}','_blank')" />`).join('');
+          if (!grid.innerHTML) grid.innerHTML = '<p style="color:var(--muted)">Sin imagen en la respuesta</p>';
+          output.style.display = 'block';
+          addHistory('images');
+        }, 400);
+      } else if (status === 'FAILURE' || status === 'FAILED') {
+        clearInterval(poll);
+        pg.style.display = 'none';
+        alert('Error en generación: ' + (data.raw?.data?.fail_reason || status));
+      } else {
+        const pct = data.raw?.data?.progress ? parseInt(data.raw.data.progress) : null;
+        if (pct) fill.style.width = Math.min(30 + pct * 0.6, 95) + '%';
+      }
+    } catch(e) { /* retry */ }
+  }, 3000);
 }
 
 function mockTTS() {
