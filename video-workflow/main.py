@@ -232,17 +232,18 @@ async def rh_get_outputs(rh_key: str, task_id: str) -> dict:
 
 async def siray_generate(api_key: str, model_id: str, image_url: str, prompt: str, duration: int, resolution: str, ref_video_url: Optional[str] = None) -> dict:
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-    input_payload: dict = {
+    payload: dict = {
+        "model": model_id,
         "image": image_url,
         "prompt": prompt,
         "duration": duration,
-        "resolution": resolution,
+        "size": resolution,
+        "aspect_ratio": "adaptive",
     }
     if ref_video_url:
-        input_payload["reference_video"] = ref_video_url
-    payload = {"model": model_id, "input": input_payload}
+        payload["end_image"] = ref_video_url
     async with httpx.AsyncClient(timeout=30) as client:
-        resp = await client.post("https://api.siray.ai/v1/video/generate", headers=headers, json=payload)
+        resp = await client.post("https://api.siray.ai/v1/video/generations", headers=headers, json=payload)
         if resp.status_code != 200:
             raise HTTPException(status_code=resp.status_code, detail=resp.text)
         return resp.json()
@@ -251,7 +252,7 @@ async def siray_generate(api_key: str, model_id: str, image_url: str, prompt: st
 async def siray_status(api_key: str, task_id: str) -> dict:
     headers = {"Authorization": f"Bearer {api_key}"}
     async with httpx.AsyncClient(timeout=15) as client:
-        resp = await client.get(f"https://api.siray.ai/v1/tasks/{task_id}", headers=headers)
+        resp = await client.get(f"https://api.siray.ai/v1/video/generations/{task_id}", headers=headers)
         if resp.status_code != 200:
             raise HTTPException(status_code=resp.status_code, detail=resp.text)
         return resp.json()
@@ -470,7 +471,7 @@ async def generate(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    task_id = result.get("task_id") or result.get("id", "")
+    task_id = (result.get("data") or {}).get("task_id") or result.get("task_id") or result.get("id", "")
     gen_cost = model["price_per_sec"] * duration
     job = {
         "id": str(uuid.uuid4()),
@@ -496,10 +497,12 @@ async def task_status(task_id: str, api_key: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    status = result.get("status", "unknown")
-    video_url = result.get("output", {}).get("video_url") or result.get("video_url")
+    data = result.get("data") or {}
+    status = data.get("status", result.get("status", "unknown"))
+    outputs = data.get("outputs") or []
+    video_url = outputs[0] if outputs else (result.get("output", {}).get("video_url") or result.get("video_url"))
 
-    if video_url and status == "completed":
+    if video_url and status.lower() in ("completed", "success"):
         history = load_history()
         for job in history:
             if job.get("task_id") == task_id:
