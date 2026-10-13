@@ -243,7 +243,7 @@ async def rh_get_outputs(rh_key: str, task_id: str) -> dict:
 
 # ─── API de Siray ───────────────────────────────────────────────────────────
 
-async def siray_generate(api_key: str, model_id: str, image_url: str, prompt: str, duration: int, resolution: str, ref_video_url: Optional[str] = None) -> dict:
+async def siray_generate(api_key: str, model_id: str, image_url: str, prompt: str, duration: int, resolution: str, ref_video_url: Optional[str] = None, aspect_ratio: str = "9:16") -> dict:
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     payload: dict = {
         "model": model_id,
@@ -251,7 +251,7 @@ async def siray_generate(api_key: str, model_id: str, image_url: str, prompt: st
         "prompt": prompt,
         "duration": duration,
         "size": resolution,
-        "aspect_ratio": "adaptive",
+        "aspect_ratio": aspect_ratio,
     }
     if ref_video_url:
         payload["end_image"] = ref_video_url
@@ -476,6 +476,7 @@ async def generate(
     duration: int = Form(10),
     resolution: str = Form("480p"),
     ref_video_filename: str = Form(""),
+    aspect_ratio: str = Form("9:16"),
 ):
     import base64
 
@@ -502,7 +503,7 @@ async def generate(
             ref_video_data_url = f"data:{vid_mime};base64,{base64.b64encode(vid_bytes).decode()}"
 
     try:
-        result = await siray_generate(api_key, model["id"], image_data_url, prompt, duration, resolution, ref_video_data_url)
+        result = await siray_generate(api_key, model["id"], image_data_url, prompt, duration, resolution, ref_video_data_url, aspect_ratio)
     except HTTPException:
         raise
     except Exception as e:
