@@ -1064,6 +1064,13 @@ function init() {
     if (k) { document.getElementById('siray-key').value = k; showSirayStatus(k); }
   } catch {}
   try {
+    const elK = localStorage.getItem('el_key_demo');
+    if (elK) {
+      document.getElementById('el-key-sidebar').value = elK;
+      document.getElementById('el-api-key').value = elK;
+    }
+  } catch {}
+  try {
     const rk = localStorage.getItem('rh_key_demo');
     const rwf = localStorage.getItem('rh_workflow_demo') || '2109479700715646977';
     document.getElementById('rh-workflow').value = rwf;
@@ -1403,6 +1410,7 @@ async function mockGenerateImg() {
   fd.append('prompt', prompt);
   fd.append('size', imgSelSize || '1:1');
   fd.append('n', n);
+  fd.append('tab', 'images');
 
   let taskId;
   try {
@@ -1443,7 +1451,7 @@ async function mockGenerateImg() {
           grid.innerHTML = urls.map(u => `<img src="${u}" style="width:100%;border-radius:10px;cursor:pointer" onclick="window.open('${u}','_blank')" />`).join('');
           if (!grid.innerHTML) grid.innerHTML = '<p style="color:var(--muted)">Sin imagen en la respuesta</p>';
           output.style.display = 'block';
-          addHistory('images');
+          addHistory('images', urls[0]);
         }, 400);
       } else if (status === 'FAILURE' || status === 'FAILED') {
         clearInterval(poll);
@@ -1533,7 +1541,7 @@ async function mockTTS() {
     const dlBtn = document.getElementById('voice-dl-btn');
     dlBtn.onclick = () => _downloadUrl(audio_url, 'voice.mp3');
 
-    addHistory('voice');
+    addHistory('voice', audio_url);
   } catch(e) {
     pg.style.display = 'none';
     alert('Error: ' + e.message);
@@ -1715,7 +1723,7 @@ async function mockUpscale(tab) {
 
     // Show download link
     const linkEl = document.getElementById('rh-result-link-' + tab);
-    if (linkEl) linkEl.innerHTML = `<a href="${scaledUrl}" target="_blank" style="color:#4ade80;font-weight:600">⬇ Descargar 1080p</a>`;
+    if (linkEl) linkEl.innerHTML = `<button onclick="_downloadUrl('${scaledUrl}','video_1080p.mp4')" style="background:transparent;border:1px solid rgba(34,197,94,.5);color:#4ade80;font-weight:600;cursor:pointer;padding:.4rem .8rem;border-radius:8px;font-family:inherit;font-size:.82rem">⬇ Descargar 1080p</button>`;
 
     // Update video element to scaled version
     if (vidEl) { vidEl.src = scaledUrl; vidEl.load(); }
@@ -1768,6 +1776,10 @@ function mockSave(svc) {
     try { localStorage.setItem('rh_key_demo', k); localStorage.setItem('rh_workflow_demo', wf); } catch {}
     showRhStatus(k, wf);
   } else {
+    const elV = document.getElementById('el-key-sidebar').value;
+    if (!elV) return;
+    try { localStorage.setItem('el_key_demo', elV); } catch {}
+    document.getElementById('el-api-key').value = elV;
     document.getElementById('el-status-sidebar').innerHTML = '<span style="color:var(--green)">✓ ElevenLabs conectado</span>';
     document.getElementById('key-badge').innerHTML = '<span class="dot"></span> Conectado';
   }

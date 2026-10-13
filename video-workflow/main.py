@@ -164,16 +164,16 @@ MODELS = {
 }
 
 IMAGE_MODELS = {
-    "flux-schnell":      {"id": "black-forest-labs/flux-1.1-pro-t2i",       "name": "FLUX Schnell"},
-    "flux-dev":          {"id": "black-forest-labs/flux-1.1-pro-ultra-t2i",  "name": "FLUX Dev"},
-    "sdxl":              {"id": "bytedance/seedream-4.0-t2i",                "name": "SDXL 1.0"},
-    "nano-banana-2":     {"id": "google/nano-banana-2-t2i",                  "name": "Nano Banana 2"},
-    "nano-banana-21":    {"id": "google/nano-banana-2-lite-t2i",             "name": "Nano Banana 2.1"},
-    "grok-aurora":       {"id": "x-ai/grok-imagine-image-t2i",              "name": "Grok Aurora (xAI)"},
-    "dalle3":            {"id": "openai/gpt-image-2-t2i",                    "name": "DALL·E 3"},
-    "flux-schnell-spicy":{"id": "black-forest-labs/flux-1.1-pro-t2i",       "name": "FLUX Schnell Spicy"},
-    "flux-dev-spicy":    {"id": "black-forest-labs/flux-1.1-pro-ultra-t2i",  "name": "FLUX Dev Spicy"},
-    "pony-diffusion":    {"id": "bytedance/seedream-4.5-t2i-spicy",          "name": "Pony Diffusion XL"},
+    "flux-schnell":      {"id": "black-forest-labs/flux-1.1-pro-t2i",       "name": "FLUX Schnell",       "price": 0.003},
+    "flux-dev":          {"id": "black-forest-labs/flux-1.1-pro-ultra-t2i",  "name": "FLUX Dev",           "price": 0.025},
+    "sdxl":              {"id": "bytedance/seedream-4.0-t2i",                "name": "SDXL 1.0",           "price": 0.006},
+    "nano-banana-2":     {"id": "google/nano-banana-2-t2i",                  "name": "Nano Banana 2",      "price": 0.018},
+    "nano-banana-21":    {"id": "google/nano-banana-2-lite-t2i",             "name": "Nano Banana 2.1",    "price": 0.022},
+    "grok-aurora":       {"id": "x-ai/grok-imagine-image-t2i",              "name": "Grok Aurora (xAI)",  "price": 0.020},
+    "dalle3":            {"id": "openai/gpt-image-2-t2i",                    "name": "DALL·E 3",           "price": 0.040},
+    "flux-schnell-spicy":{"id": "black-forest-labs/flux-1.1-pro-t2i",       "name": "FLUX Schnell Spicy", "price": 0.003},
+    "flux-dev-spicy":    {"id": "black-forest-labs/flux-1.1-pro-ultra-t2i",  "name": "FLUX Dev Spicy",     "price": 0.025},
+    "pony-diffusion":    {"id": "bytedance/seedream-4.5-t2i-spicy",          "name": "Pony Diffusion XL",  "price": 0.006},
 }
 
 UPSCALE_PRICE_PER_SEC = 0.0072  # fal.ai ByteDance upscaler 1080p/30fps
@@ -756,6 +756,23 @@ async def text_to_speech(
 
     filename = f"tts_{uuid.uuid4()}.mp3"
     audio_url = await upload_to_storage(audio_bytes, filename, "audio/mpeg")
+
+    tts_job = {
+        "id": str(uuid.uuid4()),
+        "task_id": str(uuid.uuid4()),
+        "tab": "voice",
+        "model": f"ElevenLabs · {voice_name}",
+        "model_key": voice_name,
+        "prompt": text[:200],
+        "duration": 0,
+        "resolution": "",
+        "cost_estimate": round(len(text) * 0.018 / 1000, 4),
+        "status": "completed",
+        "created_at": datetime.now().isoformat(),
+        "video_url": audio_url,
+    }
+    add_to_history(tts_job)
+
     return {"audio_url": audio_url, "filename": filename}
 
 
@@ -766,6 +783,7 @@ async def generate_image(
     prompt: str = Form(...),
     size: str = Form("1:1"),
     n: int = Form(1),
+    tab: str = Form("images"),
 ):
     model = IMAGE_MODELS.get(model_key)
     if not model:
@@ -778,7 +796,22 @@ async def generate_image(
         raise HTTPException(status_code=500, detail=str(e))
 
     task_id = (result.get("data") or {}).get("task_id") or result.get("task_id") or result.get("id", "")
-    return {"task_id": task_id, "status": "processing"}
+    job = {
+        "id": str(uuid.uuid4()),
+        "task_id": task_id,
+        "tab": tab,
+        "model": model["name"],
+        "model_key": model_key,
+        "prompt": prompt,
+        "duration": 0,
+        "resolution": size,
+        "cost_estimate": round(model.get("price", 0.003), 4),
+        "status": "processing",
+        "created_at": datetime.now().isoformat(),
+        "video_url": None,
+    }
+    add_to_history(job)
+    return {"job_id": job["id"], "task_id": task_id, "status": "processing"}
 
 
 @app.get("/api/image-status/{task_id}")
@@ -792,6 +825,15 @@ async def image_task_status(task_id: str, api_key: str):
     status = data.get("status", result.get("status", "unknown"))
     outputs = data.get("outputs") or []
     image_url = outputs[0] if outputs else None
+
+    if image_url and status.upper() in ("COMPLETED", "SUCCESS"):
+        history = load_history()
+        for job in history:
+            if job.get("task_id") == task_id:
+                job["status"] = "completed"
+                job["video_url"] = image_url
+                break
+        save_history(history)
 
     return {"status": status, "image_url": image_url, "outputs": outputs, "raw": result}
 
