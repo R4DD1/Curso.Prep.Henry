@@ -1282,8 +1282,9 @@ async function mockGenerate(tab) {
       const pct = Math.min(25 + attempt * 1.2, 92);
       fill.style.width = pct + '%';
       if (pollStep < pollMsgs.length) msg.textContent = pollMsgs[Math.floor(pollStep++)];
-      if (st.status === 'completed' && st.video_url) { videoUrl = st.video_url; break; }
-      if (st.status === 'failed') throw new Error('Generación fallida en Siray AI');
+      const doneStatus = ['completed', 'SUCCESS', 'success'].includes(st.status);
+      if (doneStatus && st.video_url) { videoUrl = st.video_url; break; }
+      if (['failed', 'FAILURE', 'failure'].includes(st.status)) throw new Error('Generación fallida en Siray AI');
     }
     if (!videoUrl) throw new Error('Tiempo de espera agotado');
 
