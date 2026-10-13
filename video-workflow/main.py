@@ -12,6 +12,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+import boto3
+from botocore.exceptions import BotoCoreError
+
 import httpx
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
@@ -174,6 +177,39 @@ IMAGE_MODELS = {
 }
 
 UPSCALE_PRICE_PER_SEC = 0.0072  # fal.ai ByteDance upscaler 1080p/30fps
+
+
+# ─── Cloudflare R2 storage ──────────────────────────────────────────────────
+
+def _r2_client():
+    required = ["R2_ENDPOINT_URL", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET"]
+    if not all(os.environ.get(k) for k in required):
+        return None, None
+    client = boto3.client(
+        "s3",
+        endpoint_url=os.environ["R2_ENDPOINT_URL"],
+        aws_access_key_id=os.environ["R2_ACCESS_KEY_ID"],
+        aws_secret_access_key=os.environ["R2_SECRET_ACCESS_KEY"],
+        region_name="auto",
+    )
+    return client, os.environ["R2_BUCKET"]
+
+
+async def upload_to_storage(content: bytes, filename: str, content_type: str = "video/mp4") -> str:
+    """Upload to R2 if configured, otherwise save locally. Returns public URL."""
+    client, bucket = _r2_client()
+    if client:
+        try:
+            client.put_object(Bucket=bucket, Key=filename, Body=content, ContentType=content_type)
+            public_base = os.environ.get("R2_PUBLIC_URL", "").rstrip("/")
+            return f"{public_base}/{filename}"
+        except (BotoCoreError, Exception):
+            pass
+    # fallback: local
+    ext_dir = OUTPUTS_DIR if content_type.startswith("video") or content_type.startswith("audio") else OUTPUTS_DIR
+    dest = ext_dir / filename
+    dest.write_bytes(content)
+    return f"/outputs/{filename}"
 
 RH_BASE = "https://www.runninghub.ai"
 RH_UPSCALE_WORKFLOW_NODE = [{"nodeId": "16", "fieldName": "video"}]
@@ -610,6 +646,19 @@ ELEVENLABS_VOICE_IDS = {
 }
 
 
+@app.post("/api/save-video")
+async def save_video(video_url: str = Form(...)):
+    """Download video from Siray URL and upload to persistent storage."""
+    async with httpx.AsyncClient(timeout=120) as client:
+        resp = await client.get(video_url)
+        if resp.status_code != 200:
+            raise HTTPException(status_code=502, detail="No se pudo descargar el video")
+        video_bytes = resp.content
+    filename = f"video_{uuid.uuid4()}.mp4"
+    permanent_url = await upload_to_storage(video_bytes, filename, "video/mp4")
+    return {"permanent_url": permanent_url, "filename": filename}
+
+
 @app.post("/api/tts")
 async def text_to_speech(
     api_key: str = Form(...),
@@ -643,9 +692,8 @@ async def text_to_speech(
         audio_bytes = resp.content
 
     filename = f"tts_{uuid.uuid4()}.mp3"
-    dest = OUTPUTS_DIR / filename
-    dest.write_bytes(audio_bytes)
-    return {"audio_url": f"/outputs/{filename}", "filename": filename}
+    audio_url = await upload_to_storage(audio_bytes, filename, "audio/mpeg")
+    return {"audio_url": audio_url, "filename": filename}
 
 
 @app.post("/api/generate-image")

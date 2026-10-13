@@ -1312,6 +1312,15 @@ async function mockGenerate(tab) {
     }
     if (!videoUrl) throw new Error('Tiempo de espera agotado');
 
+    // Save to persistent storage (R2 or local)
+    fill.style.width = '93%'; msg.textContent = 'Guardando video...';
+    try {
+      const saveForm = new FormData();
+      saveForm.append('video_url', videoUrl);
+      const saveResp = await fetch('/api/save-video', { method: 'POST', body: saveForm });
+      if (saveResp.ok) { const { permanent_url } = await saveResp.json(); videoUrl = permanent_url; }
+    } catch(e) { /* keep Siray URL if save fails */ }
+
     // 4. Merge audio if UGC tab has audio uploaded
     if (tab === 'ugc') {
       const audioInput = document.getElementById('ugc-audio-input');
