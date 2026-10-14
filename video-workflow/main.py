@@ -314,10 +314,10 @@ async def siray_generate(
         payload["video"] = input_video_url
     elif image_url:
         payload["image"] = image_url
+        if ref_video_url:
+            payload["video"] = ref_video_url
     if reference_images:
         payload["reference_images"] = reference_images
-    if ref_video_url:
-        payload["end_image"] = ref_video_url
     async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.post("https://api.siray.ai/v1/video/generations", headers=headers, json=payload)
         if resp.status_code != 200:
