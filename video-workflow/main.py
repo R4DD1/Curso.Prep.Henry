@@ -561,7 +561,7 @@ async def generate(
     api_key: str = Form(...),
     model_key: str = Form(...),
     image_filename: str = Form(""),
-    prompt: str = Form(...),
+    prompt: str = Form(""),
     duration: int = Form(10),
     resolution: str = Form("480p"),
     ref_video_filename: str = Form(""),

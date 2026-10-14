@@ -252,6 +252,14 @@ body { background: var(--bg); color: var(--text); font-family: 'Inter', -apple-s
 .v2v-input-zone:hover { border-color:var(--accent); background:var(--accent-glow); }
 .v2v-input-zone.has-file { border-color:var(--accent); border-style:solid; }
 .v2v-input-zone input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; }
+/* ── Ref2V transform slots ── */
+.transform-grid { display:grid; grid-template-columns:1fr 1fr; gap:.7rem; margin-bottom:.9rem; }
+.transform-slot { border:2px dashed var(--border2); border-radius:var(--radius); min-height:110px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.4rem; cursor:pointer; position:relative; overflow:hidden; transition:border-color .15s, background .15s; }
+.transform-slot:hover { border-color:var(--accent); background:var(--accent-glow); }
+.transform-slot.has-file { border-color:var(--accent); border-style:solid; background:var(--accent-glow); }
+.transform-slot input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; }
+.transform-slot-label { font-size:.72rem; color:var(--text2); font-weight:600; text-align:center; line-height:1.4; }
+.transform-slot-sub { font-size:.65rem; color:var(--muted); text-align:center; }
 
 /* ── Form fields ── */
 .field-label { font-size: .76rem; color: var(--text2); display: block; margin-bottom: .3rem; }
@@ -652,6 +660,23 @@ textarea.prompt:focus { border-color: var(--accent); }
             <span class="dz-sub">MP4 · MOV · WEBM</span>
           </div>
         </div>
+        <div id="reels-transform-wrap" style="display:none;margin-bottom:.9rem">
+          <label class="field-label" style="margin-bottom:.5rem">🎨 Reemplazar en el video <em style="color:var(--muted);font-weight:400">(opcional)</em></label>
+          <div class="transform-grid">
+            <div class="transform-slot" id="reels-bg-slot">
+              <input type="file" accept="image/*" />
+              <span style="font-size:1.5rem">🌅</span>
+              <span class="transform-slot-label">Nuevo fondo</span>
+              <span class="transform-slot-sub">JPG · PNG · WEBP</span>
+            </div>
+            <div class="transform-slot" id="reels-outfit-slot">
+              <input type="file" accept="image/*" />
+              <span style="font-size:1.5rem">👗</span>
+              <span class="transform-slot-label">Nueva ropa / outfit</span>
+              <span class="transform-slot-sub">JPG · PNG · WEBP</span>
+            </div>
+          </div>
+        </div>
         <div class="ref-gallery-wrap" id="reels-ref-gallery-wrap" style="display:none">
           <div class="ref-gallery-header">
             <span>🎭 Imágenes de referencia adicionales <em style="color:var(--muted)">(opcional · máx. 4)</em></span>
@@ -755,6 +780,23 @@ textarea.prompt:focus { border-color: var(--accent); }
             <span class="dz-icon">🎬</span>
             <span class="dz-label" style="font-size:.78rem">Video de entrada <em style="color:var(--muted)">(Video2Video)</em></span>
             <span class="dz-sub">MP4 · MOV · WEBM</span>
+          </div>
+        </div>
+        <div id="ugc-transform-wrap" style="display:none;margin-bottom:.9rem">
+          <label class="field-label" style="margin-bottom:.5rem">🎨 Reemplazar en el video <em style="color:var(--muted);font-weight:400">(opcional)</em></label>
+          <div class="transform-grid">
+            <div class="transform-slot" id="ugc-bg-slot">
+              <input type="file" accept="image/*" />
+              <span style="font-size:1.5rem">🌅</span>
+              <span class="transform-slot-label">Nuevo fondo</span>
+              <span class="transform-slot-sub">JPG · PNG · WEBP</span>
+            </div>
+            <div class="transform-slot" id="ugc-outfit-slot">
+              <input type="file" accept="image/*" />
+              <span style="font-size:1.5rem">👗</span>
+              <span class="transform-slot-label">Nueva ropa / outfit</span>
+              <span class="transform-slot-sub">JPG · PNG · WEBP</span>
+            </div>
           </div>
         </div>
         <div class="ref-gallery-wrap" id="ugc-ref-gallery-wrap" style="display:none">
@@ -1278,24 +1320,28 @@ function pickModel(tab, key) {
     const avatarZone = document.getElementById(tab + '-avatar-zone');
     const warn = document.getElementById(tab + '-ref2v-warn');
     const galleryWrap = document.getElementById(tab + '-ref-gallery-wrap');
+    const transformWrap = document.getElementById(tab + '-transform-wrap');
     if (m.needsRef) {
       if (refVid) refVid.style.display = '';
       if (v2vZone) v2vZone.style.display = 'none';
       if (avatarZone) avatarZone.style.display = '';
       if (warn) warn.style.display = '';
       if (galleryWrap) galleryWrap.style.display = '';
+      if (transformWrap) transformWrap.style.display = '';
     } else if (m.needsV2V) {
       if (refVid) refVid.style.display = 'none';
       if (v2vZone) v2vZone.style.display = '';
       if (avatarZone) avatarZone.style.display = 'none';
       if (warn) warn.style.display = 'none';
       if (galleryWrap) galleryWrap.style.display = '';
+      if (transformWrap) transformWrap.style.display = 'none';
     } else {
       if (refVid) refVid.style.display = 'none';
       if (v2vZone) v2vZone.style.display = 'none';
       if (avatarZone) avatarZone.style.display = '';
       if (warn) warn.style.display = 'none';
       if (galleryWrap) galleryWrap.style.display = '';
+      if (transformWrap) transformWrap.style.display = 'none';
     }
   }
   // Image model cost
@@ -1356,17 +1402,20 @@ document.addEventListener('change', function(e) {
   if (e.target.type !== 'file') return;
   const file = e.target.files && e.target.files[0];
   if (!file) return;
-  const zone = e.target.closest('.drop-zone') || e.target.closest('.v2v-input-zone');
+  const zone = e.target.closest('.drop-zone') || e.target.closest('.v2v-input-zone') || e.target.closest('.transform-slot');
   if (!zone) return;
   zone.classList.add('has-file');
+  const isTransform = zone.classList.contains('transform-slot');
   const isVideo = file.type.startsWith('video/');
+  const shortName = file.name.length > 22 ? file.name.slice(0,20)+'…' : file.name;
   if (isVideo) {
-    zone.querySelector('.dz-icon').textContent = '✅';
-    zone.querySelector('.dz-label').textContent = file.name.length > 22 ? file.name.slice(0,20)+'…' : file.name;
+    const icon = zone.querySelector('.dz-icon');
+    const label = zone.querySelector('.dz-label');
+    if (icon) icon.textContent = '✅';
+    if (label) label.textContent = shortName;
   } else {
     const reader = new FileReader();
     reader.onload = function(ev) {
-      // remove any existing preview
       const old = zone.querySelector('.dz-preview-img');
       if (old) old.remove();
       const img = document.createElement('img');
@@ -1375,8 +1424,15 @@ document.addEventListener('change', function(e) {
       img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit;opacity:.55;pointer-events:none;';
       zone.style.position = 'relative';
       zone.appendChild(img);
-      zone.querySelector('.dz-icon').textContent = '✅';
-      zone.querySelector('.dz-label').textContent = file.name.length > 22 ? file.name.slice(0,20)+'…' : file.name;
+      if (isTransform) {
+        const lbl = zone.querySelector('.transform-slot-label');
+        if (lbl) lbl.textContent = shortName;
+      } else {
+        const icon = zone.querySelector('.dz-icon');
+        const label = zone.querySelector('.dz-label');
+        if (icon) icon.textContent = '✅';
+        if (label) label.textContent = shortName;
+      }
     };
     reader.readAsDataURL(file);
   }
@@ -1428,9 +1484,22 @@ async function mockGenerate(tab) {
       filename = (await upResp.json()).filename || '';
     }
 
-    // Upload extra reference images
+    // Upload extra reference images (gallery + transform slots)
     fill.style.width = '12%'; msg.textContent = 'Subiendo imágenes de referencia...';
     const refFilenames = await uploadRefSlots(tab);
+    // Upload bg/outfit transform slots (Ref2V)
+    for (const slotId of ['bg', 'outfit']) {
+      const slotEl = document.getElementById(tab + '-' + slotId + '-slot');
+      if (!slotEl) continue;
+      const inp = slotEl.querySelector('input[type=file]');
+      if (!inp || !inp.files || !inp.files[0]) continue;
+      const fd = new FormData();
+      fd.append('file', inp.files[0]);
+      try {
+        const r = await fetch('/api/upload-image', { method:'POST', body:fd });
+        if (r.ok) { const d = await r.json(); if (d.filename) refFilenames.push(d.filename); }
+      } catch {}
+    }
 
     fill.style.width = '18%'; msg.textContent = 'Enviando a Siray AI...';
 
