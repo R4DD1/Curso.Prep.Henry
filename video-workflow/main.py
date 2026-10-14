@@ -67,6 +67,17 @@ MODELS = {
         "needs_image": True,
         "needs_ref_video": True,
     },
+    "wan3-v2v": {
+        "id": "alibaba/wan-3.0-v2v",
+        "name": "Wan 3.0 Video2Video",
+        "badge": "V2V",
+        "description": "Transformá un video: cambiá fondo, ropa y objetos conservando la acción original.",
+        "max_duration": 15,
+        "price_per_sec": 0.050,
+        "resolution": ["480p", "720p"],
+        "needs_image": False,
+        "needs_input_video": True,
+    },
     # ── Kling ────────────────────────────────────────────────────────────────
     "kling": {
         "id": "kuaishou/kling-3-motion-control",
@@ -279,16 +290,32 @@ async def rh_get_outputs(rh_key: str, task_id: str) -> dict:
 
 # ─── API de Siray ───────────────────────────────────────────────────────────
 
-async def siray_generate(api_key: str, model_id: str, image_url: str, prompt: str, duration: int, resolution: str, ref_video_url: Optional[str] = None, aspect_ratio: str = "9:16") -> dict:
+async def siray_generate(
+    api_key: str,
+    model_id: str,
+    image_url: str,
+    prompt: str,
+    duration: int,
+    resolution: str,
+    ref_video_url: Optional[str] = None,
+    aspect_ratio: str = "9:16",
+    reference_images: Optional[list] = None,
+    input_video_url: Optional[str] = None,
+) -> dict:
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     payload: dict = {
         "model": model_id,
-        "image": image_url,
         "prompt": prompt,
         "duration": duration,
         "size": resolution,
         "aspect_ratio": aspect_ratio,
     }
+    if input_video_url:
+        payload["video"] = input_video_url
+    elif image_url:
+        payload["image"] = image_url
+    if reference_images:
+        payload["reference_images"] = reference_images
     if ref_video_url:
         payload["end_image"] = ref_video_url
     async with httpx.AsyncClient(timeout=30) as client:
@@ -533,13 +560,15 @@ async def serve_output(filename: str):
 async def generate(
     api_key: str = Form(...),
     model_key: str = Form(...),
-    image_filename: str = Form(...),
+    image_filename: str = Form(""),
     prompt: str = Form(...),
     duration: int = Form(10),
     resolution: str = Form("480p"),
     ref_video_filename: str = Form(""),
     aspect_ratio: str = Form("9:16"),
     tab: str = Form("reels"),
+    ref_image_filenames: str = Form(""),
+    input_video_filename: str = Form(""),
 ):
     import base64
 
@@ -547,15 +576,44 @@ async def generate(
     if not model:
         raise HTTPException(status_code=400, detail="Modelo no encontrado")
 
-    image_path = UPLOADS_DIR / image_filename
-    if not image_path.exists():
+    # Main image (i2v models)
+    image_data_url = ""
+    if image_filename:
+        image_path = UPLOADS_DIR / image_filename
+        if not image_path.exists():
+            raise HTTPException(status_code=400, detail="Imagen no encontrada")
+        img_bytes = image_path.read_bytes()
+        suffix = image_path.suffix.lstrip(".")
+        mime = f"image/{suffix}" if suffix in ("jpg", "jpeg", "png", "webp") else "image/jpeg"
+        image_data_url = f"data:{mime};base64,{base64.b64encode(img_bytes).decode()}"
+    elif not model.get("needs_input_video"):
         raise HTTPException(status_code=400, detail="Imagen no encontrada")
 
-    img_bytes = image_path.read_bytes()
-    suffix = image_path.suffix.lstrip(".")
-    mime = f"image/{suffix}" if suffix in ("jpg", "jpeg", "png", "webp") else "image/jpeg"
-    image_data_url = f"data:{mime};base64,{base64.b64encode(img_bytes).decode()}"
+    # Extra reference images (multi-ref)
+    reference_images_data: list = []
+    if ref_image_filenames:
+        for fname in ref_image_filenames.split(","):
+            fname = fname.strip()
+            if not fname:
+                continue
+            ref_path = UPLOADS_DIR / fname
+            if ref_path.exists():
+                rb = ref_path.read_bytes()
+                rs = ref_path.suffix.lstrip(".")
+                rm = f"image/{rs}" if rs in ("jpg", "jpeg", "png", "webp") else "image/jpeg"
+                reference_images_data.append(f"data:{rm};base64,{base64.b64encode(rb).decode()}")
 
+    # Input video for v2v
+    input_video_data_url: Optional[str] = None
+    if input_video_filename and model.get("needs_input_video"):
+        inp_path = UPLOADS_DIR / input_video_filename
+        if inp_path.exists():
+            vb = inp_path.read_bytes()
+            vs = inp_path.suffix.lstrip(".")
+            vm = f"video/{vs}" if vs in ("mp4", "webm", "mov") else "video/mp4"
+            input_video_data_url = f"data:{vm};base64,{base64.b64encode(vb).decode()}"
+
+    # Ref video for Ref2V
     ref_video_data_url: Optional[str] = None
     if ref_video_filename and model.get("needs_ref_video"):
         ref_path = UPLOADS_DIR / ref_video_filename
@@ -566,7 +624,12 @@ async def generate(
             ref_video_data_url = f"data:{vid_mime};base64,{base64.b64encode(vid_bytes).decode()}"
 
     try:
-        result = await siray_generate(api_key, model["id"], image_data_url, prompt, duration, resolution, ref_video_data_url, aspect_ratio)
+        result = await siray_generate(
+            api_key, model["id"], image_data_url, prompt, duration, resolution,
+            ref_video_data_url, aspect_ratio,
+            reference_images=reference_images_data or None,
+            input_video_url=input_video_data_url,
+        )
     except HTTPException:
         raise
     except Exception as e:

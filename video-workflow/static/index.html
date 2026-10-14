@@ -231,6 +231,28 @@ body { background: var(--bg); color: var(--text); font-family: 'Inter', -apple-s
 .dz-label { font-size: .78rem; color: var(--text2); text-align: center; line-height: 1.4; }
 .dz-sub { font-size: .68rem; color: var(--muted); }
 
+/* ── Multi-ref gallery ── */
+.ref-gallery-wrap { margin-bottom: .9rem; }
+.ref-gallery-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:.45rem; }
+.ref-gallery-header span { font-size:.74rem; color:var(--text2); }
+.ref-gallery { display:flex; gap:.5rem; flex-wrap:wrap; }
+.ref-slot { position:relative; width:90px; height:90px; border:2px dashed var(--border2); border-radius:10px; overflow:hidden; cursor:pointer; flex-shrink:0; transition:border-color .15s; }
+.ref-slot:hover { border-color:var(--accent); }
+.ref-slot.has-file { border-color:var(--accent); border-style:solid; }
+.ref-slot input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; z-index:2; }
+.ref-slot-icon { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.2rem; pointer-events:none; }
+.ref-slot-icon span { font-size:1.3rem; }
+.ref-slot-icon em { font-size:.62rem; color:var(--muted); font-style:normal; }
+.ref-slot-img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:.6; }
+.ref-slot-rm { position:absolute; top:3px; right:3px; width:18px; height:18px; border-radius:50%; background:rgba(0,0,0,.75); border:none; color:#fff; font-size:.7rem; cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:3; line-height:1; }
+.ref-slot-rm:hover { background:var(--red); }
+.btn-add-ref { background:transparent; border:1px dashed var(--border2); color:var(--text2); padding:.2rem .6rem; border-radius:6px; font-size:.72rem; cursor:pointer; font-family:inherit; transition:border-color .15s, color .15s; }
+.btn-add-ref:hover { border-color:var(--accent); color:var(--accent); }
+.v2v-input-zone { border:2px dashed var(--purple); border-radius:var(--radius); min-height:110px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.4rem; cursor:pointer; position:relative; overflow:hidden; transition:border-color .15s, background .15s; }
+.v2v-input-zone:hover { border-color:var(--accent); background:var(--accent-glow); }
+.v2v-input-zone.has-file { border-color:var(--accent); border-style:solid; }
+.v2v-input-zone input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; }
+
 /* ── Form fields ── */
 .field-label { font-size: .76rem; color: var(--text2); display: block; margin-bottom: .3rem; }
 textarea.prompt {
@@ -608,17 +630,12 @@ textarea.prompt:focus { border-color: var(--accent); }
           <strong>Formato:</strong> vertical 9:16 · <span class="hi">Ideal para TikTok, Instagram Reels, YouTube Shorts</span><br>
           Wan 3.0 genera movimientos naturales de cámara, bailes y expresiones faciales.
         </div>
-        <div class="upload-grid">
-          <div class="drop-zone">
+        <div class="upload-grid" id="reels-main-upload-grid">
+          <div class="drop-zone" id="reels-avatar-zone">
             <input type="file" accept="image/*" />
             <span class="dz-icon">🖼️</span>
             <span class="dz-label">Imagen del avatar</span>
             <span class="dz-sub">JPG · PNG · WEBP</span>
-          </div>
-          <div class="drop-zone" id="reels-ref-img-zone" style="min-height:110px">
-            <input type="file" accept="image/*" />
-            <span class="dz-icon">🎭</span>
-            <span class="dz-label" style="font-size:.72rem">Ref. adicional<br><em style="color:var(--muted)">(opcional)</em></span>
           </div>
           <div class="drop-zone" id="reels-ref-video-zone" style="min-height:110px;display:none">
             <input type="file" accept="video/*" />
@@ -626,6 +643,21 @@ textarea.prompt:focus { border-color: var(--accent); }
             <span class="dz-label" style="font-size:.72rem">Video de<br>referencia</span>
             <span class="dz-sub">MP4 · MOV</span>
           </div>
+        </div>
+        <div id="reels-v2v-zone" style="display:none;margin-bottom:.9rem;">
+          <div class="v2v-input-zone" id="reels-v2v-input-zone">
+            <input type="file" accept="video/*" />
+            <span class="dz-icon">🎬</span>
+            <span class="dz-label" style="font-size:.78rem">Video de entrada <em style="color:var(--muted)">(Video2Video)</em></span>
+            <span class="dz-sub">MP4 · MOV · WEBM</span>
+          </div>
+        </div>
+        <div class="ref-gallery-wrap" id="reels-ref-gallery-wrap" style="display:none">
+          <div class="ref-gallery-header">
+            <span>🎭 Imágenes de referencia adicionales <em style="color:var(--muted)">(opcional · máx. 4)</em></span>
+            <button class="btn-add-ref" id="reels-add-ref-btn" onclick="addRefSlot('reels')">+ Añadir imagen</button>
+          </div>
+          <div class="ref-gallery" id="reels-ref-gallery-slots"></div>
         </div>
         <div class="warn-banner" id="reels-ref2v-warn" style="display:none">
           ⚠️ <strong>Ref2V billing:</strong> se cobra duración del video de entrada + salida (ej: 5s ref + 15s output = 20s facturados).
@@ -703,8 +735,8 @@ textarea.prompt:focus { border-color: var(--accent); }
           <strong>UGC (User Generated Content):</strong> videos de reseña, unboxing y demostración de producto con tu avatar IA.<br>
           <span class="hi">Wan 3.0 y Seedance</span> manejan expresiones naturales, manos y objetos.
         </div>
-        <div class="upload-grid">
-          <div class="drop-zone">
+        <div class="upload-grid" id="ugc-main-upload-grid">
+          <div class="drop-zone" id="ugc-avatar-zone">
             <input type="file" accept="image/*" />
             <span class="dz-icon">🖼️</span>
             <span class="dz-label">Imagen del avatar</span>
@@ -716,11 +748,21 @@ textarea.prompt:focus { border-color: var(--accent); }
             <span class="dz-label" style="font-size:.72rem">Video de<br>referencia</span>
             <span class="dz-sub">MP4 · MOV</span>
           </div>
-          <div class="drop-zone" id="ugc-ref-img-zone" style="min-height:110px">
-            <input type="file" accept="image/*" />
-            <span class="dz-icon">📦</span>
-            <span class="dz-label" style="font-size:.72rem">Producto<br><em style="color:var(--muted)">(opcional)</em></span>
+        </div>
+        <div id="ugc-v2v-zone" style="display:none;margin-bottom:.9rem;">
+          <div class="v2v-input-zone" id="ugc-v2v-input-zone">
+            <input type="file" accept="video/*" />
+            <span class="dz-icon">🎬</span>
+            <span class="dz-label" style="font-size:.78rem">Video de entrada <em style="color:var(--muted)">(Video2Video)</em></span>
+            <span class="dz-sub">MP4 · MOV · WEBM</span>
           </div>
+        </div>
+        <div class="ref-gallery-wrap" id="ugc-ref-gallery-wrap" style="display:none">
+          <div class="ref-gallery-header">
+            <span>🎭 Imágenes de referencia adicionales <em style="color:var(--muted)">(opcional · máx. 4)</em></span>
+            <button class="btn-add-ref" id="ugc-add-ref-btn" onclick="addRefSlot('ugc')">+ Añadir imagen</button>
+          </div>
+          <div class="ref-gallery" id="ugc-ref-gallery-slots"></div>
         </div>
         <div class="warn-banner" id="ugc-ref2v-warn" style="display:none">
           ⚠️ <strong>Ref2V billing:</strong> se cobra duración del video de entrada + salida (ej: 5s ref + 15s output = 20s facturados).
@@ -1018,6 +1060,7 @@ const CATS = {
       'seedance-20': { name:'Seedance 2.0', badge:'NUEVO', bc:'', desc:'Mayor coherencia temporal y mejor calidad de movimiento que 1.0.', maxDur:10, price:0.084, res:['480p','720p'], needsRef:false },
       'seedance-25': { name:'Seedance 2.5', badge:'TOP', bc:'gb', desc:'Última versión de Seedance, físicas ultra-realistas y manos perfectas.', maxDur:10, price:0.134, res:['480p','720p','1080p'], needsRef:false },
       'wan3-ref': { name:'Wan 3.0 Ref2V', badge:'VIDEO REF', bc:'pb', desc:'Cloná movimientos desde un video de referencia. Ideal para coreografías y danzas.', maxDur:15, price:0.040, res:['480p','720p'], needsRef:true },
+      'wan3-v2v': { name:'Wan 3.0 Video2Video', badge:'V2V', bc:'pb', desc:'Transformá un video: cambiá fondo, ropa y objetos conservando la acción original.', maxDur:15, price:0.050, res:['480p','720p'], needsV2V:true },
     }
   },
   ugc: {
@@ -1035,6 +1078,7 @@ const CATS = {
       'seedance-25': { name:'Seedance 2.5', badge:'TOP', bc:'gb', desc:'Última versión, físicas ultra-realistas, ideal para manos con productos.', maxDur:10, price:0.134, res:['480p','720p','1080p'], needsRef:false },
       'veo3': { name:'Veo 3', badge:'BETA', bc:'gb', desc:'Modelo de Google, alta calidad cinematográfica.', maxDur:8, price:0.240, res:['720p','1080p'], needsRef:false },
       'wan3-ref': { name:'Wan 3.0 Ref2V', badge:'VIDEO REF', bc:'pb', desc:'Cloná movimientos desde un video de referencia.', maxDur:15, price:0.040, res:['480p','720p'], needsRef:true },
+      'wan3-v2v': { name:'Wan 3.0 Video2Video', badge:'V2V', bc:'pb', desc:'Transformá un video: cambiá fondo, ropa y objetos conservando la acción original.', maxDur:15, price:0.050, res:['480p','720p'], needsV2V:true },
     }
   },
   images: {
@@ -1089,7 +1133,92 @@ function init() {
     }
   } catch {}
   renderModels('reels');
+  // Show reference galleries by default
+  ['reels','ugc'].forEach(t => {
+    const g = document.getElementById(t + '-ref-gallery-wrap');
+    if (g) g.style.display = '';
+  });
   loadHistoryFromBackend();
+}
+
+// ── Reference image gallery ───────────────────────────────────────────────────
+const _refSlotFilenames = { reels: {}, ugc: {} };
+
+function addRefSlot(tab) {
+  const container = document.getElementById(tab + '-ref-gallery-slots');
+  const addBtn = document.getElementById(tab + '-add-ref-btn');
+  if (!container) return;
+  const slots = container.querySelectorAll('.ref-slot');
+  if (slots.length >= 4) { addBtn.textContent = 'Máximo 4'; return; }
+
+  const slotId = tab + '-refslot-' + Date.now();
+  const slot = document.createElement('div');
+  slot.className = 'ref-slot';
+  slot.dataset.slotId = slotId;
+  slot.innerHTML = `
+    <input type="file" accept="image/*" onchange="onRefSlotFile(this,'${tab}','${slotId}')" />
+    <div class="ref-slot-icon"><span>🖼️</span><em>+ Ref</em></div>
+    <button class="ref-slot-rm" onclick="removeRefSlot(this,'${tab}','${slotId}')" title="Quitar">×</button>
+  `;
+  container.appendChild(slot);
+  if (container.querySelectorAll('.ref-slot').length >= 4) addBtn.textContent = 'Máx. 4';
+}
+
+function removeRefSlot(btn, tab, slotId) {
+  const slot = btn.closest('.ref-slot');
+  if (slot) {
+    delete _refSlotFilenames[tab][slotId];
+    slot.remove();
+  }
+  const addBtn = document.getElementById(tab + '-add-ref-btn');
+  if (addBtn) addBtn.textContent = '+ Añadir imagen';
+}
+
+function onRefSlotFile(input, tab, slotId) {
+  const file = input.files[0];
+  if (!file) return;
+  const slot = input.closest('.ref-slot');
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const old = slot.querySelector('.ref-slot-img');
+    if (old) old.remove();
+    const img = document.createElement('img');
+    img.src = ev.target.result;
+    img.className = 'ref-slot-img';
+    slot.appendChild(img);
+    const icon = slot.querySelector('.ref-slot-icon');
+    if (icon) { icon.querySelector('span').textContent = '✅'; icon.querySelector('em').textContent = file.name.length > 12 ? file.name.slice(0,10)+'…' : file.name; }
+    slot.classList.add('has-file');
+    slot.dataset.pending = '1';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function uploadRefSlots(tab) {
+  const container = document.getElementById(tab + '-ref-gallery-slots');
+  if (!container) return [];
+  const slots = container.querySelectorAll('.ref-slot');
+  const filenames = [];
+  for (const slot of slots) {
+    const input = slot.querySelector('input[type=file]');
+    if (!input || !input.files || !input.files[0]) continue;
+    if (!slot.dataset.pending && _refSlotFilenames[tab][slot.dataset.slotId]) {
+      filenames.push(_refSlotFilenames[tab][slot.dataset.slotId]);
+      continue;
+    }
+    const fd = new FormData();
+    fd.append('file', input.files[0]);
+    try {
+      const r = await fetch('/api/upload-image', { method:'POST', body:fd });
+      if (r.ok) {
+        const d = await r.json();
+        _refSlotFilenames[tab][slot.dataset.slotId] = d.filename;
+        delete slot.dataset.pending;
+        filenames.push(d.filename);
+      }
+    } catch {}
+  }
+  return filenames;
 }
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
@@ -1142,19 +1271,31 @@ function pickModel(tab, key) {
     el.classList.toggle('sel', Object.keys(CATS[tab].models)[i] === key);
   });
   const m = CATS[tab].models[key];
-  // Ref video toggle for UGC and Reels
+  // Ref video / V2V toggle for UGC and Reels
   if (tab === 'ugc' || tab === 'reels') {
     const refVid = document.getElementById(tab + '-ref-video-zone');
-    const refImg = document.getElementById(tab + '-ref-img-zone');
+    const v2vZone = document.getElementById(tab + '-v2v-zone');
+    const avatarZone = document.getElementById(tab + '-avatar-zone');
     const warn = document.getElementById(tab + '-ref2v-warn');
+    const galleryWrap = document.getElementById(tab + '-ref-gallery-wrap');
     if (m.needsRef) {
       if (refVid) refVid.style.display = '';
-      if (refImg) refImg.style.display = 'none';
+      if (v2vZone) v2vZone.style.display = 'none';
+      if (avatarZone) avatarZone.style.display = '';
       if (warn) warn.style.display = '';
+      if (galleryWrap) galleryWrap.style.display = '';
+    } else if (m.needsV2V) {
+      if (refVid) refVid.style.display = 'none';
+      if (v2vZone) v2vZone.style.display = '';
+      if (avatarZone) avatarZone.style.display = 'none';
+      if (warn) warn.style.display = 'none';
+      if (galleryWrap) galleryWrap.style.display = '';
     } else {
       if (refVid) refVid.style.display = 'none';
-      if (refImg) refImg.style.display = '';
+      if (v2vZone) v2vZone.style.display = 'none';
+      if (avatarZone) avatarZone.style.display = '';
       if (warn) warn.style.display = 'none';
+      if (galleryWrap) galleryWrap.style.display = '';
     }
   }
   // Image model cost
@@ -1215,7 +1356,7 @@ document.addEventListener('change', function(e) {
   if (e.target.type !== 'file') return;
   const file = e.target.files && e.target.files[0];
   if (!file) return;
-  const zone = e.target.closest('.drop-zone');
+  const zone = e.target.closest('.drop-zone') || e.target.closest('.v2v-input-zone');
   if (!zone) return;
   zone.classList.add('has-file');
   const isVideo = file.type.startsWith('video/');
@@ -1247,31 +1388,53 @@ async function mockGenerate(tab) {
   if (!sirayKey) { alert('Guardá tu clave de Siray AI primero.'); return; }
 
   const tabEl = document.getElementById('tab-' + tab);
-  const imageInput = tabEl.querySelector('.drop-zone:first-of-type input[type=file]');
-  if (!imageInput || !imageInput.files || !imageInput.files[0]) {
-    alert('Seleccioná una imagen de avatar primero.'); return;
-  }
+  const modelKey = selModels[tab];
+  const m = CATS[tab].models[modelKey];
 
   const pg = document.getElementById(tab + '-progress');
   const fill = document.getElementById(tab + '-pfill');
   const msg = document.getElementById(tab + '-pmsg');
   const output = document.getElementById(tab + '-output');
   pg.style.display = ''; output.style.display = 'none';
-  fill.style.width = '5%'; msg.textContent = 'Subiendo imagen...';
 
   try {
-    // 1. Upload image
-    const formImg = new FormData();
-    formImg.append('file', imageInput.files[0]);
-    const upResp = await fetch('/api/upload-image', { method:'POST', body: formImg });
-    if (!upResp.ok) throw new Error('Error subiendo imagen: ' + (await upResp.text()));
-    const { filename } = await upResp.json();
+    let filename = '';
+    let inputVideoFilename = '';
 
-    fill.style.width = '15%'; msg.textContent = 'Enviando a Siray AI...';
+    if (m.needsV2V) {
+      // V2V: upload input video
+      const v2vInput = document.getElementById(tab + '-v2v-input-zone').querySelector('input[type=file]');
+      if (!v2vInput || !v2vInput.files || !v2vInput.files[0]) {
+        alert('Seleccioná un video de entrada para Video2Video.'); pg.style.display='none'; return;
+      }
+      fill.style.width = '5%'; msg.textContent = 'Subiendo video de entrada...';
+      const vfd = new FormData();
+      vfd.append('file', v2vInput.files[0]);
+      const vr = await fetch('/api/upload-video', { method:'POST', body:vfd });
+      if (!vr.ok) throw new Error('Error subiendo video: ' + (await vr.text()));
+      inputVideoFilename = (await vr.json()).filename || '';
+    } else {
+      // I2V: upload avatar image
+      const avatarZone = document.getElementById(tab + '-avatar-zone');
+      const imageInput = avatarZone ? avatarZone.querySelector('input[type=file]') : tabEl.querySelector('.drop-zone input[type=file]');
+      if (!imageInput || !imageInput.files || !imageInput.files[0]) {
+        alert('Seleccioná una imagen de avatar primero.'); pg.style.display='none'; return;
+      }
+      fill.style.width = '5%'; msg.textContent = 'Subiendo imagen...';
+      const formImg = new FormData();
+      formImg.append('file', imageInput.files[0]);
+      const upResp = await fetch('/api/upload-image', { method:'POST', body: formImg });
+      if (!upResp.ok) throw new Error('Error subiendo imagen: ' + (await upResp.text()));
+      filename = (await upResp.json()).filename || '';
+    }
+
+    // Upload extra reference images
+    fill.style.width = '12%'; msg.textContent = 'Subiendo imágenes de referencia...';
+    const refFilenames = await uploadRefSlots(tab);
+
+    fill.style.width = '18%'; msg.textContent = 'Enviando a Siray AI...';
 
     // 2. Submit generation
-    const modelKey = selModels[tab];
-    const m = CATS[tab].models[modelKey];
     const durEl = document.getElementById(tab + '-dur-val');
     const dur = durEl ? parseInt(durEl.textContent) || 10 : 10;
     const resEl = document.getElementById(tab + '-res-sel') || tabEl.querySelector('select');
@@ -1305,6 +1468,8 @@ async function mockGenerate(tab) {
     genForm.append('aspect_ratio', aspect_ratio);
     genForm.append('tab', tab);
     if (refVideoFilename) genForm.append('ref_video_filename', refVideoFilename);
+    if (refFilenames.length) genForm.append('ref_image_filenames', refFilenames.join(','));
+    if (inputVideoFilename) genForm.append('input_video_filename', inputVideoFilename);
 
     const genResp = await fetch('/api/generate', { method:'POST', body: genForm });
     if (!genResp.ok) throw new Error('Error generando: ' + (await genResp.text()));
