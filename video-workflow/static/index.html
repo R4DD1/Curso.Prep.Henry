@@ -1604,7 +1604,7 @@ async function mockGenerate(tab) {
     const vid = document.getElementById(tab + '-output-video');
     if (vid) { vid.src = videoUrl; vid.load(); }
 
-    addHistory(tab, videoUrl);
+    addHistory(tab, videoUrl, refVideoFilename);
     if (typeof RocketMascot !== 'undefined') RocketMascot.celebrate();
 
     // show RH upscale button if key is set
@@ -1794,14 +1794,14 @@ async function mockTTS() {
 // ── History ───────────────────────────────────────────────────────────────────
 let histItems = [];
 const catLabels = { reels:'Reels', ugc:'UGC', images:'Imagen', voice:'Voz' };
-function addHistory(tab, videoUrl) {
+function addHistory(tab, videoUrl, refVideoFilename) {
   const m = CATS[tab].models[selModels[tab]];
   const durEl = document.getElementById(tab + '-dur-val');
   const dur = durEl ? parseInt(durEl.textContent) || 10 : 10;
   const promptEl = document.querySelector('#tab-' + tab + ' .prompt');
   const prompt = promptEl ? promptEl.value : '';
   const price = tab === 'images' ? (m ? m.price : 0.003) : tab === 'voice' ? 0.018 : (m ? m.price * dur : 0.40);
-  histItems.unshift({ tab, cat: catLabels[tab], model: m ? m.name : 'ElevenLabs', modelKey: selModels[tab], cost: price.toFixed(3), prompt, dur, video_url: videoUrl || null });
+  histItems.unshift({ tab, cat: catLabels[tab], model: m ? m.name : 'ElevenLabs', modelKey: selModels[tab], cost: price.toFixed(3), prompt, dur, video_url: videoUrl || null, refVideoFilename: refVideoFilename || '' });
   renderHistory();
 }
 function renderHistory() {
@@ -1821,6 +1821,7 @@ function renderHistory() {
       <div style="display:flex;align-items:center;gap:.4rem;flex-shrink:0">
         <div class="hist-cost">$${h.cost}</div>
         ${h.video_url ? `<button onclick="downloadFromHistory(${i})" title="Descargar" style="${btnBase} rgba(34,197,94,.5);background:rgba(34,197,94,.15);color:#4ade80">⬇</button>` : ''}
+        ${h.refVideoFilename ? `<button onclick="useRefAudio(${i})" title="Agregar audio del video de referencia" style="${btnBase} rgba(240,200,0,.5);background:rgba(240,200,0,.15);color:var(--accent)">🎵</button>` : ''}
         <button onclick="replicateFromHistory(${i})" style="${btnBase} rgba(123,63,203,.5);background:rgba(123,63,203,.25);color:var(--accent)">🔁</button>
       </div>
     </div>
@@ -1831,6 +1832,34 @@ function downloadFromHistory(idx) {
   if (!h || !h.video_url) return;
   const ext = h.cat === 'Voz' ? 'mp3' : 'mp4';
   _downloadUrl(h.video_url, `${h.cat || 'archivo'}_${idx + 1}.${ext}`);
+}
+async function useRefAudio(idx) {
+  const h = histItems[idx];
+  if (!h || !h.video_url || !h.refVideoFilename) return;
+  // find button by data attribute
+  const btns = document.querySelectorAll('#history-list .hist-item');
+  const btn = btns[idx] ? btns[idx].querySelector('[title="Agregar audio del video de referencia"]') : null;
+  try {
+    if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+    const fd = new FormData();
+    fd.append('video_url', h.video_url);
+    fd.append('ref_video_filename', h.refVideoFilename);
+    const resp = await fetch('/api/merge-ref-audio', { method: 'POST', body: fd });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ detail: 'Error desconocido' }));
+      throw new Error(err.detail || 'Error al fusionar audio');
+    }
+    const { merged_url } = await resp.json();
+    h.video_url = merged_url;
+    h.refVideoFilename = '';
+    // update output video player if visible
+    const vid = document.getElementById(h.tab + '-output-video');
+    if (vid && vid.src && vid.src.includes(h.tab)) { vid.src = merged_url; vid.load(); }
+    renderHistory();
+  } catch(e) {
+    alert('Error al agregar audio: ' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = '🎵'; }
+  }
 }
 async function loadHistoryFromBackend() {
   try {

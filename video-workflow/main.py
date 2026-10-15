@@ -507,6 +507,61 @@ async def upload_audio(file: UploadFile = File(...)):
     return {"path": f"/uploads/{filename}", "filename": filename}
 
 
+@app.post("/api/merge-ref-audio")
+async def merge_ref_audio(
+    video_url: str = Form(...),
+    ref_video_filename: str = Form(...),
+):
+    """Extract audio from the reference video and merge it into the generated video."""
+    ref_path = UPLOADS_DIR / ref_video_filename
+    if not ref_path.exists():
+        raise HTTPException(status_code=400, detail="Video de referencia no encontrado en el servidor (puede haberse reiniciado). Volvé a subir el video.")
+
+    # Download or read generated video
+    if video_url.startswith("/outputs/"):
+        gen_local = OUTPUTS_DIR / video_url.split("/outputs/")[-1]
+        if not gen_local.exists():
+            raise HTTPException(status_code=400, detail="Video generado no encontrado localmente")
+        gen_video_bytes = gen_local.read_bytes()
+    else:
+        async with httpx.AsyncClient(timeout=120) as client:
+            resp = await client.get(video_url)
+            if resp.status_code != 200:
+                raise HTTPException(status_code=502, detail="No se pudo descargar el video generado")
+            gen_video_bytes = resp.content
+
+    tmp_gen = UPLOADS_DIR / f"tmp_gen_{uuid.uuid4()}.mp4"
+    tmp_gen.write_bytes(gen_video_bytes)
+    merged_filename = f"merged_ref_{uuid.uuid4()}.mp4"
+    merged_path = OUTPUTS_DIR / merged_filename
+
+    try:
+        result = subprocess.run(
+            [
+                "ffmpeg", "-y",
+                "-i", str(tmp_gen),
+                "-i", str(ref_path),
+                "-map", "0:v:0",
+                "-map", "1:a:0",
+                "-c:v", "copy",
+                "-c:a", "aac",
+                "-shortest",
+                str(merged_path),
+            ],
+            capture_output=True,
+            timeout=120,
+        )
+        if result.returncode != 0:
+            stderr = result.stderr.decode()
+            if "does not contain any stream" in stderr or "Invalid data" in stderr:
+                raise HTTPException(status_code=400, detail="El video de referencia no tiene pista de audio")
+            raise HTTPException(status_code=500, detail="ffmpeg error: " + stderr[:300])
+    finally:
+        tmp_gen.unlink(missing_ok=True)
+
+    return {"merged_url": f"/outputs/{merged_filename}", "filename": merged_filename}
+
+
 @app.post("/api/merge-audio-video")
 async def merge_audio_video(
     video_url: str = Form(...),
